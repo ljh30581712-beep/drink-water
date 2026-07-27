@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HydroCheck · AI 음수 인증 시스템</title>
+<meta name="description" content="AI Vision으로 실제 음수 행동을 검증하는 반도체 팹 근로자용 수분 섭취 관제 시스템 (NAVER OGQ마켓 AI Competition 출품작)">
+<meta property="og:title" content="HydroCheck · AI 음수 인증 시스템">
+<meta property="og:description" content="정해진 시간에 알람이 울리고, 실제로 물 마시는 모습을 AI가 판별해야 알람이 꺼집니다.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%A7%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" id="themeColorMeta" content="#0D1319">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #0D1319;
+    --panel: #141C24;
+    --panel-2: #1B2530;
+    --line: #263241;
+    --teal: #5EEAD4;
+    --teal-dim: #2C7A6E;
+    --amber: #FBBF24;
+    --red: #F87171;
+    --text: #E7EEF3;
+    --text-dim: #7C8CA0;
+  }
+  body.light{
+    --bg: #F4F7F8;
+    --panel: #FFFFFF;
+    --panel-2: #EEF3F5;
+    --line: #DCE4E9;
+    --teal: #0E9C8C;
+    --teal-dim: #BFEAE3;
+    --amber: #D97706;
+    --red: #DC2626;
+    --text: #16222A;
+    --text-dim: #64768A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 20% -10%, #16202C 0%, transparent 45%),
+      radial-gradient(circle at 100% 110%, #142027 0%, transparent 50%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding: 28px 16px 60px;
+    transition: background-color .25s ease, color .25s ease;
+  }
+  body.light{
+    background:
+      radial-gradient(circle at 20% -10%, #FFFFFF 0%, transparent 45%),
+      radial-gradient(circle at 100% 110%, #E8F3F1 0%, transparent 50%),
+      var(--bg);
+  }
+  .app{ width:100%; max-width:480px; }
+
+  /* header */
+  .hdr{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; }
+  .hdr .tag{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.18em; color:var(--teal); }
+  .hdr h1{ font-size:20px; font-weight:700; letter-spacing:-0.01em; margin-top:4px; }
+  .status-dot{ width:8px; height:8px; border-radius:50%; background:var(--text-dim); display:inline-block; margin-right:6px; }
+  .status-dot.on{ background:var(--teal); box-shadow:0 0 8px var(--teal); }
+  .status-dot.alarm{ background:var(--amber); box-shadow:0 0 10px var(--amber); animation:pulse 1s infinite; }
+  @keyframes pulse{ 50%{opacity:.35;} }
+  .status-line{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); text-align:right; }
+  .clock-display{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--teal); margin-bottom:4px; letter-spacing:.02em; }
+  .offline-badge{ color:var(--red); font-weight:600; margin-right:8px; }
+  .online-badge{ color:var(--teal); font-weight:600; margin-right:8px; }
+
+  /* ring */
+  .ring-wrap{ position:relative; width:260px; height:260px; margin: 8px auto 20px; }
+  svg.ring{ transform:rotate(-90deg); width:100%; height:100%; }
+  .ring-bg{ fill:none; stroke:var(--panel-2); stroke-width:10; }
+  .ring-fg{ fill:none; stroke:var(--teal); stroke-width:10; stroke-linecap:round; transition: stroke-dashoffset .5s ease, stroke .3s; }
+  .ring-fg.alarm{ stroke:var(--amber); }
+  .ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring-time{ font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:700; letter-spacing:-0.01em; }
+  .ring-sub{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); margin-top:6px; letter-spacing:.08em; }
+  .ring-ticks{ position:absolute; inset:0; }
+
+  /* buttons */
+  .row{ display:flex; gap:10px; margin-bottom:14px; }
+  button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:14px;
+    border-radius:10px; border:1px solid var(--line); cursor:pointer;
+    padding:13px 16px; color:var(--text); background:var(--panel-2);
+    transition: all .15s;
+  }
+  button:hover{ border-color:var(--teal); }
+  button:active{ transform:scale(.98); }
+  button.primary{ background:var(--teal); color:#08161A; border-color:var(--teal); flex:1; }
+  button.primary:hover{ background:#7EF3E1; }
+  button.ghost{ flex:1; }
+  button.danger{ border-color:var(--red); color:var(--red); }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button.full{ width:100%; }
+
+  /* panels */
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:14px; }
+  .panel h2{ font-size:12px; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; font-family:'JetBrains Mono',monospace; }
+
+  .settings-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .field label{ display:block; font-size:11px; color:var(--text-dim); margin-bottom:6px; font-family:'JetBrains Mono',monospace; }
+  .field input{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; padding:9px 8px; font-family:'JetBrains Mono',monospace; font-size:14px;
+  }
+  .field input:focus{ outline:none; border-color:var(--teal); }
+  .derived{ margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--teal-dim); }
+  .derived b{ color:var(--teal); }
+
+  .progress-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .progress-row .num{ font-family:'JetBrains Mono',monospace; font-size:15px; }
+  .progress-row .num b{ color:var(--teal); font-size:19px; }
+  .bar{ height:6px; background:var(--panel-2); border-radius:4px; overflow:hidden; }
+  .bar-fill{ height:100%; background:var(--teal); transition:width .4s ease; }
+
+  .log{ margin-top:10px; display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto; }
+  .log-item{ display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim); border-bottom:1px dashed var(--line); padding-bottom:5px; }
+  .log-item span:last-child{ color:var(--teal); }
+  .empty{ font-size:12px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; }
+
+  /* camera modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(5,9,12,.88); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal{ background:var(--panel); border:1px solid var(--line); border-radius:16px; width:100%; max-width:420px; padding:20px; }
+  .modal h3{ font-size:16px; margin-bottom:4px; }
+  .modal p.desc{ font-size:12px; color:var(--text-dim); margin-bottom:14px; }
+  video, canvas{ width:100%; border-radius:10px; background:#000; }
+  #video{ transform:scaleX(-1); } /* 전면 카메라 미리보기만 거울처럼 반전 (실제 캡처 이미지는 원본 그대로 유지되어 AI 분석엔 영향 없음) */
+  .video-wrap{ position:relative; margin-bottom:14px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .verdict{ margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:13px; padding:10px; border-radius:8px; }
+  .verdict.pending{ background:var(--panel-2); color:var(--text-dim); }
+  .verdict.yes{ background:rgba(94,234,212,.12); color:var(--teal); border:1px solid var(--teal-dim); }
+  .verdict.no{ background:rgba(248,113,113,.1); color:var(--red); border:1px solid #7A3535; }
+  body.light .verdict.no{ background:rgba(220,38,38,.08); border:1px solid #F3B4B4; }
+  body.light .verdict.yes{ background:rgba(14,156,140,.1); }
+
+  .footnote{ font-size:11px; color:var(--text-dim); line-height:1.6; text-align:center; margin-top:18px; }
+
+  .lang-switch{ display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; align-items:center; }
+  .lang-btn{
+    font-family:'JetBrains Mono',monospace; font-size:10px; padding:4px 8px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim); cursor:pointer;
+  }
+  .lang-btn.active{ border-color:var(--teal); color:var(--teal); background:rgba(94,234,212,.08); }
+
+  .theme-switch{ display:flex; gap:4px; }
+  .theme-btn{
+    font-size:13px; padding:4px 9px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim); cursor:pointer;
+    line-height:1.4;
+  }
+  .theme-btn.active{ border-color:var(--teal); color:var(--teal); background:rgba(94,234,212,.08); }
+
+  .stats-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .stat-box{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 6px; text-align:center; }
+  .stat-num{ font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; color:var(--text); }
+  .stat-label{ font-size:10px; color:var(--text-dim); margin-top:2px; }
+
+  .judge-banner{
+    background:rgba(94,234,212,.08); border:1px solid var(--teal-dim); color:var(--teal);
+    font-size:12px; padding:10px 12px; border-radius:10px; text-align:center; margin-bottom:14px;
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+const { useState, useEffect, useRef, useCallback } = (() => {
+  // minimal vanilla state engine (no React dependency)
+  return {};
+})();
+</script>
+
+<script type="text/babel" data-presets="react"></script>
+
+<!-- Plain JS implementation (no framework) -->
+<script>
+(function(){
+
+  const appEl = document.getElementById('app');
+
+  // ---------- state ----------
+  let state = {
+    goalMl: 3500,
+    windowHours: 9,
+    perDrinkMl: 200,
+    running: false,
+    remainingSec: null,
+    intervalId: null,
+    alarm: false,
+    consumedMl: 0,
+    log: [],           // {time, ml}
+    camOpen: false,
+    stream: null,
+    verdict: null,      // null | 'pending' | 'yes' | 'no'
+    verdictReason: '',
+    audioCtx: null,
+    beepId: null,
+    vibrateId: null,
+    lang: 'ko',
+    failCount: 0,
+    theme: 'dark', // 'dark' | 'light'
+    offline: (typeof navigator !== 'undefined' && 'onLine' in navigator) ? !navigator.onLine : false,
+    snoozeUsed: false, // 알람 1회당 스누즈는 단 한 번만 허용
+  };
+
+  // ---------- i18n ----------
+  const I18N = {
+    ko: {
+      tag: 'HYDRA-01 · 클린룸 수분 관제',
+      title: '수분 섭취 관제',
+      statusAlarm: '음수 확인 필요',
+      statusOn: '가동 중',
+      statusOff: '대기',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`NEXT IN ${m}MIN 주기`,
+      ringIdleSub: (m)=>`주기 ${m}분`,
+      btnStart: '타이머 시작',
+      btnStop: '타이머 정지',
+      btnOpenCam: '📷 물 마시는 영상 촬영',
+      todayIntakeTitle: '오늘 섭취 현황',
+      emptyLog: '아직 기록이 없습니다',
+      settingsTitle: '설정',
+      labelGoal: '목표(ml/일)',
+      labelWindow: '근무시간(h)',
+      labelDrink: '1회 섭취(ml)',
+      derived: (min, ml, count)=>`약 ${min}분마다 ${ml}ml씩, 하루 총 ${count}회 섭취`,
+      footnote: '성인 하루 권장 수분량 2.5L 기준, 방진복 착용 클린룸 근무자는 유산소 운동 1시간 수준의 발한이 있다고 가정해 3.5L로 상향했습니다.<br>촬영 영상은 프레임 1장만 AI 판별에 사용되며 서버에 저장되지 않습니다.',
+      modalTitle: '음수 인증 촬영',
+      modalDesc: '물을 마시는 장면이 잘 보이도록 카메라를 향해 촬영해주세요.',
+      verdictPending: 'AI 판별 중...',
+      verdictYes: (r)=>`✔ 음수 확인 완료${r?' · '+r:''}. 타이머를 재시작합니다.`,
+      verdictNo: (r)=>`✘ 확인되지 않았습니다${r?' · '+r:''}. 다시 촬영해주세요.`,
+      btnCancel: '취소',
+      btnCapture: '촬영 및 판별',
+      camDenied: '카메라 접근에 실패했습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.',
+      camNotReady: '카메라가 아직 준비되지 않았습니다.',
+      genericError: '오류: ',
+      btnTest: '⚡ 지금 알람 테스트 (심사용)',
+      btnRetry: '🔄 다시 촬영하기',
+      statsTitle: '음수 인증 통계',
+      statsAttempts: '총 시도',
+      statsSuccess: '성공',
+      statsFail: '실패',
+      statsRate: '성공률',
+      statsAvgInterval: '평균 간격',
+      statsNoData: '아직 데이터가 없습니다',
+      minUnit: '분',
+      judgeBanner: '👆 아래 "지금 알람 테스트" 버튼으로 대기 없이 바로 체험해보실 수 있어요',
+      friendlyError: '일시적인 오류가 발생했습니다. 다시 시도해주세요.',
+      rateLimitError: 'AI 사용 한도를 모두 사용했습니다. 잠시 후 다시 시도해주세요.',
+      timeoutError: 'AI 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.',
+      serviceBusyError: 'AI 서버가 일시적으로 혼잡합니다. 잠시 후 다시 시도해주세요.',
+      networkError: '네트워크 연결을 확인해주세요.',
+      btnResetToday: '🗑️ 오늘 기록 초기화',
+      btnSnooze: '⏰ 5분 연기 (1회만 가능)',
+      confirmReset: '오늘의 섭취 기록과 통계를 초기화할까요? 이 작업은 되돌릴 수 없습니다.',
+      offlineLabel: '오프라인',
+      onlineLabel: '온라인',
+    },
+    en: {
+      tag: 'HYDRA-01 · CLEANROOM HYDRATION',
+      title: 'Hydration Control',
+      statusAlarm: 'Verification needed',
+      statusOn: 'Running',
+      statusOff: 'Idle',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`NEXT IN ${m}MIN`,
+      ringIdleSub: (m)=>`Cycle ${m}min`,
+      btnStart: 'Start Timer',
+      btnStop: 'Stop Timer',
+      btnOpenCam: '📷 Record Drinking Video',
+      todayIntakeTitle: "Today's Intake",
+      emptyLog: 'No records yet',
+      settingsTitle: 'Settings',
+      labelGoal: 'Goal (ml/day)',
+      labelWindow: 'Shift (h)',
+      labelDrink: 'Per drink (ml)',
+      derived: (min, ml, count)=>`About ${ml}ml every ${min}min, ${count} times/day total`,
+      footnote: 'Based on the recommended 2.5L daily intake for adults, raised to 3.5L assuming cleanroom workers in protective suits sweat roughly as much as an hour of aerobic exercise.<br>Only a single frame is used for AI verification and is not stored on any server.',
+      modalTitle: 'Drink Verification',
+      modalDesc: 'Point the camera so your drinking motion is clearly visible.',
+      verdictPending: 'AI analyzing...',
+      verdictYes: (r)=>`✔ Verified${r?' · '+r:''}. Restarting timer.`,
+      verdictNo: (r)=>`✘ Not verified${r?' · '+r:''}. Please try again.`,
+      btnCancel: 'Cancel',
+      btnCapture: 'Capture & Verify',
+      camDenied: 'Camera access failed. Please allow camera permission in your browser settings.',
+      camNotReady: 'Camera is not ready yet.',
+      genericError: 'Error: ',
+      btnTest: '⚡ Trigger Alarm Now (Demo)',
+      btnRetry: '🔄 Retake Photo',
+      statsTitle: 'Verification Stats',
+      statsAttempts: 'Attempts',
+      statsSuccess: 'Success',
+      statsFail: 'Failed',
+      statsRate: 'Success Rate',
+      statsAvgInterval: 'Avg Interval',
+      statsNoData: 'No data yet',
+      minUnit: 'min',
+      judgeBanner: '👆 Try the "Trigger Alarm Now" button below to skip the wait',
+      friendlyError: 'A temporary error occurred. Please try again.',
+      rateLimitError: 'AI usage limit reached. Please try again later.',
+      timeoutError: 'The AI took too long to respond. Please try again.',
+      serviceBusyError: 'The AI service is temporarily busy. Please try again shortly.',
+      networkError: 'Please check your network connection.',
+      btnResetToday: '🗑️ Reset Today\'s Records',
+      btnSnooze: '⏰ Snooze 5 min (once only)',
+      confirmReset: 'Reset today\'s intake records and stats? This cannot be undone.',
+      offlineLabel: 'Offline',
+      onlineLabel: 'Online',
+    },
+    ja: {
+      tag: 'HYDRA-01 · クリーンルーム水分管制',
+      title: '水分補給管制',
+      statusAlarm: '飲水確認が必要',
+      statusOn: '稼働中',
+      statusOff: '待機',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`次まで${m}分`,
+      ringIdleSub: (m)=>`周期 ${m}分`,
+      btnStart: 'タイマー開始',
+      btnStop: 'タイマー停止',
+      btnOpenCam: '📷 飲水シーンを撮影',
+      todayIntakeTitle: '本日の摂取状況',
+      emptyLog: 'まだ記録がありません',
+      settingsTitle: '設定',
+      labelGoal: '目標(ml/日)',
+      labelWindow: '勤務時間(h)',
+      labelDrink: '1回摂取量(ml)',
+      derived: (min, ml, count)=>`約${min}分ごとに${ml}mlずつ、1日合計${count}回摂取`,
+      footnote: '成人の1日推奨水分摂取量2.5Lを基準に、防塵服着用のクリーンルーム勤務者は有酸素運動1時間相当の発汗があると想定し3.5Lに引き上げました。<br>撮影映像はAI判定のため1フレームのみ使用され、サーバーには保存されません。',
+      modalTitle: '飲水認証撮影',
+      modalDesc: '水を飲む様子がよく見えるようにカメラに向けて撮影してください。',
+      verdictPending: 'AI判定中...',
+      verdictYes: (r)=>`✔ 確認完了${r?' · '+r:''}。タイマーを再開します。`,
+      verdictNo: (r)=>`✘ 確認できませんでした${r?' · '+r:''}。もう一度撮影してください。`,
+      btnCancel: 'キャンセル',
+      btnCapture: '撮影して判定',
+      camDenied: 'カメラへのアクセスに失敗しました。ブラウザの設定でカメラ権限を許可してください。',
+      camNotReady: 'カメラがまだ準備できていません。',
+      genericError: 'エラー: ',
+      btnTest: '⚡ 今すぐアラームテスト（デモ用）',
+      btnRetry: '🔄 再撮影する',
+      statsTitle: '飲水認証統計',
+      statsAttempts: '総試行回数',
+      statsSuccess: '成功',
+      statsFail: '失敗',
+      statsRate: '成功率',
+      statsAvgInterval: '平均間隔',
+      statsNoData: 'まだデータがありません',
+      minUnit: '分',
+      judgeBanner: '👆 下の「今すぐアラームテスト」ボタンで待たずにすぐ体験できます',
+      friendlyError: '一時的なエラーが発生しました。もう一度お試しください。',
+      rateLimitError: 'AI利用上限に達しました。しばらくしてからもう一度お試しください。',
+      timeoutError: 'AIの応答に時間がかかりすぎました。もう一度お試しください。',
+      serviceBusyError: 'AIサーバーが一時的に混雑しています。しばらくしてからもう一度お試しください。',
+      networkError: 'ネットワーク接続をご確認ください。',
+      btnResetToday: '🗑️ 本日の記録をリセット',
+      btnSnooze: '⏰ 5分延長（1回のみ）',
+      confirmReset: '本日の摂取記録と統計をリセットしますか？この操作は元に戻せません。',
+      offlineLabel: 'オフライン',
+      onlineLabel: 'オンライン',
+    },
+  };
+  function t(key, ...args){
+    const entry = I18N[state.lang][key];
+    return typeof entry === 'function' ? entry(...args) : entry;
+  }
+
+  function intervalMinutes(){
+    const drinksNeeded = state.goalMl / state.perDrinkMl;
+    const windowMin = state.windowHours * 60;
+    return Math.max(1, Math.round(windowMin / drinksNeeded));
+  }
+
+  function fmt(sec){
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = Math.floor(sec%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+  }
+
+  function render(){
+    savePersisted();
+    document.body.classList.toggle('light', state.theme === 'light');
+    const themeColorMeta = document.getElementById('themeColorMeta');
+    if(themeColorMeta) themeColorMeta.setAttribute('content', state.theme === 'light' ? '#F4F7F8' : '#0D1319');
+    const intervalMin = intervalMinutes();
+    const totalSec = intervalMin*60;
+    const pct = state.remainingSec==null ? 0 : Math.max(0, Math.min(1, 1 - state.remainingSec/totalSec));
+    const R = 118;
+    const C = 2*Math.PI*R;
+    const dash = C - pct*C;
+    const progressPct = Math.min(100, (state.consumedMl/state.goalMl*100)).toFixed(0);
+
+    appEl.innerHTML = `
+      <div class="hdr">
+        <div>
+          <div class="tag">${t('tag')}</div>
+          <h1>${t('title')}</h1>
+          <div class="lang-switch">
+            <button class="lang-btn ${state.lang==='ko'?'active':''}" id="langKo" aria-label="한국어로 전환" aria-pressed="${state.lang==='ko'}">한국어</button>
+            <button class="lang-btn ${state.lang==='en'?'active':''}" id="langEn" aria-label="Switch to English" aria-pressed="${state.lang==='en'}">EN</button>
+            <button class="lang-btn ${state.lang==='ja'?'active':''}" id="langJa" aria-label="日本語に切り替え" aria-pressed="${state.lang==='ja'}">日本語</button>
+            <span style="width:6px;"></span>
+            <div class="theme-switch">
+              <button class="theme-btn ${state.theme==='dark'?'active':''}" id="themeDark" title="Dark mode" aria-label="다크 모드로 전환" aria-pressed="${state.theme==='dark'}">🌙</button>
+              <button class="theme-btn ${state.theme==='light'?'active':''}" id="themeLight" title="Light mode" aria-label="라이트 모드로 전환" aria-pressed="${state.theme==='light'}">☀️</button>
+            </div>
+          </div>
+        </div>
+        <div class="status-line">
+          <div id="clockDisplay" class="clock-display"></div>
+          ${state.offline
+            ? `<span class="offline-badge">🔴 ${t('offlineLabel')}</span>`
+            : `<span class="online-badge">🟢 ${t('onlineLabel')}</span>`}
+          <span class="status-dot ${state.alarm ? 'alarm' : (state.running?'on':'')}"></span>
+          ${state.alarm ? t('statusAlarm') : (state.running ? t('statusOn') : t('statusOff'))}
+        </div>
+      </div>
+
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 260 260">
+          <circle class="ring-bg" cx="130" cy="130" r="${R}"/>
+          <circle class="ring-fg ${state.alarm?'alarm':''}" cx="130" cy="130" r="${R}"
+            stroke-dasharray="${C}" stroke-dashoffset="${state.running||state.alarm?dash:0}"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-time">${state.alarm ? '🔔' : fmt(state.remainingSec ?? totalSec)}</div>
+          <div class="ring-sub">${state.alarm ? t('ringAlarmSub') : (state.running ? t('ringRunningSub', intervalMin) : t('ringIdleSub', intervalMin))}</div>
+        </div>
+      </div>
+
+      <div class="row">
+        ${!state.running && !state.alarm ? `<button class="primary full" id="btnStart">${t('btnStart')}</button>` : ''}
+        ${state.running && !state.alarm ? `<button class="danger full" id="btnStop">${t('btnStop')}</button>` : ''}
+        ${state.alarm ? `<button class="primary full" id="btnOpenCam">${t('btnOpenCam')}</button>` : ''}
+      </div>
+      ${state.alarm && !state.snoozeUsed ? `
+      <div class="row">
+        <button class="ghost full" id="btnSnooze" style="font-size:12px;">${t('btnSnooze')}</button>
+      </div>` : ''}
+      ${!state.alarm ? `
+      <div class="row">
+        <button class="ghost full" id="btnTest" style="font-size:12px;">${t('btnTest')}</button>
+      </div>
+      <div class="judge-banner">${t('judgeBanner')}</div>` : ''}
+
+      <div class="panel">
+        <h2>${t('todayIntakeTitle')}</h2>
+        <div class="progress-row">
+          <span class="num"><b>${state.consumedMl}</b> / ${state.goalMl} ml</span>
+          <span class="num">${progressPct}%</span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${progressPct}%"></div></div>
+        <div class="log">
+          ${state.log.length===0 ? `<div class="empty">${t('emptyLog')}</div>` :
+            state.log.slice().reverse().map(l=>`<div class="log-item"><span>${l.time}</span><span>+${l.ml}ml</span></div>`).join('')}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>${t('statsTitle')}</h2>
+        ${renderStats()}
+      </div>
+
+      <div class="panel">
+        <h2>${t('settingsTitle')}</h2>
+        <div class="settings-grid">
+          <div class="field">
+            <label>${t('labelGoal')}</label>
+            <input type="number" id="inGoal" value="${state.goalMl}" step="100">
+          </div>
+          <div class="field">
+            <label>${t('labelWindow')}</label>
+            <input type="number" id="inWindow" value="${state.windowHours}" step="0.5">
+          </div>
+          <div class="field">
+            <label>${t('labelDrink')}</label>
+            <input type="number" id="inDrink" value="${state.perDrinkMl}" step="50">
+          </div>
+        </div>
+        <div class="derived">${t('derived', intervalMinutes(), state.perDrinkMl, Math.ceil(state.goalMl/state.perDrinkMl))}</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="ghost full" id="btnResetToday" style="font-size:12px;">${t('btnResetToday')}</button>
+        </div>
+      </div>
+
+      <div class="footnote">
+        ${t('footnote')}
+      </div>
+
+      ${state.camOpen ? renderModal() : ''}
+    `;
+    bindEvents(intervalMin);
+    updateClock();
+
+    // render()가 innerHTML을 다시 그리면 <video> 태그도 새로 생성되어 기존 스트림 연결이 끊긴다.
+    // 카메라가 켜져 있는 상태(state.stream 존재)라면 새로 생긴 video 태그에 스트림을 다시 붙여준다.
+    if(state.camOpen && state.stream){
+      const videoEl = document.getElementById('video');
+      if(videoEl && videoEl.srcObject !== state.stream){
+        videoEl.srcObject = state.stream;
+      }
+    }
+  }
+
+  function renderStats(){
+    const successCount = state.log.length;
+    const failCount = state.failCount;
+    const totalAttempts = successCount + failCount;
+    if(totalAttempts === 0){
+      return `<div class="empty">${t('statsNoData')}</div>`;
+    }
+    const rate = Math.round((successCount/totalAttempts)*100);
+    let avgIntervalMin = '-';
+    if(state.log.length >= 2){
+      const sorted = state.log.slice().sort((a,b)=>a.ts-b.ts);
+      let diffs = [];
+      for(let i=1;i<sorted.length;i++){ diffs.push((sorted[i].ts - sorted[i-1].ts)/60000); }
+      avgIntervalMin = Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length);
+    }
+    return `
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num">${totalAttempts}</div><div class="stat-label">${t('statsAttempts')}</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--teal)">${successCount}</div><div class="stat-label">${t('statsSuccess')}</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#ff6b6b">${failCount}</div><div class="stat-label">${t('statsFail')}</div></div>
+        <div class="stat-box"><div class="stat-num">${rate}%</div><div class="stat-label">${t('statsRate')}</div></div>
+        <div class="stat-box"><div class="stat-num">${avgIntervalMin}${typeof avgIntervalMin==='number'?t('minUnit'):''}</div><div class="stat-label">${t('statsAvgInterval')}</div></div>
+      </div>
+    `;
+  }
+
+  function renderModal(){
+    let verdictHtml = '';
+    if(state.verdict === 'pending'){
+      verdictHtml = `<div class="verdict pending">${t('verdictPending')}</div>`;
+    } else if(state.verdict === 'yes'){
+      verdictHtml = `<div class="verdict yes">${t('verdictYes', state.verdictReason)}</div>`;
+    } else if(state.verdict === 'no'){
+      verdictHtml = `<div class="verdict no">${t('verdictNo', state.verdictReason)}</div>`;
+    }
+    return `
+      <div class="overlay" id="overlay">
+        <div class="modal">
+          <h3>${t('modalTitle')}</h3>
+          <p class="desc">${t('modalDesc')}</p>
+          <div class="video-wrap">
+            <video id="video" autoplay playsinline muted></video>
+          </div>
+          ${verdictHtml}
+          <div class="row" style="margin-top:12px;">
+            <button class="ghost" id="btnCancel">${t('btnCancel')}</button>
+            ${state.verdict === 'no'
+              ? `<button class="primary" id="btnRetry">${t('btnRetry')}</button>`
+              : `<button class="primary" id="btnCapture" ${state.verdict==='pending'?'disabled':''}>${t('btnCapture')}</button>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindEvents(intervalMin){
+    const $ = id => document.getElementById(id);
+
+    if($('inGoal')) $('inGoal').onchange = e => { state.goalMl = Math.max(500, +e.target.value||3500); render(); };
+    if($('inWindow')) $('inWindow').onchange = e => { state.windowHours = Math.max(1, +e.target.value||9); render(); };
+    if($('inDrink')) $('inDrink').onchange = e => { state.perDrinkMl = Math.max(50, +e.target.value||200); render(); };
+
+    if($('btnStart')) $('btnStart').onclick = () => startTimer(intervalMin);
+    if($('btnStop')) $('btnStop').onclick = stopTimer;
+    if($('btnOpenCam')) $('btnOpenCam').onclick = openCamera;
+    if($('btnSnooze')) $('btnSnooze').onclick = snoozeAlarm;
+    if($('btnTest')) $('btnTest').onclick = () => {
+      unlockAudio(); // 버튼 클릭(사용자 제스처) 시점에 오디오 언락
+      clearInterval(state.intervalId);
+      triggerAlarm();
+    };
+    if($('langKo')) $('langKo').onclick = () => { state.lang = 'ko'; render(); };
+    if($('langEn')) $('langEn').onclick = () => { state.lang = 'en'; render(); };
+    if($('langJa')) $('langJa').onclick = () => { state.lang = 'ja'; render(); };
+    if($('themeDark')) $('themeDark').onclick = () => { state.theme = 'dark'; render(); };
+    if($('themeLight')) $('themeLight').onclick = () => { state.theme = 'light'; render(); };
+    if($('btnCancel')) $('btnCancel').onclick = closeCamera;
+    if($('btnCapture')) $('btnCapture').onclick = captureAndVerify;
+    if($('btnRetry')) $('btnRetry').onclick = () => { state.verdict = null; state.verdictReason=''; render(); };
+    if($('btnResetToday')) $('btnResetToday').onclick = resetToday;
+  }
+
+  // ---------- timer ----------
+  function armCountdown(seconds){
+    clearInterval(state.intervalId);
+    state.remainingSec = seconds;
+    state.intervalId = setInterval(()=>{
+      state.remainingSec -= 1;
+      if(state.remainingSec <= 0){
+        clearInterval(state.intervalId);
+        triggerAlarm();
+      } else {
+        render();
+      }
+    }, 1000);
+  }
+
+  function startTimer(intervalMin){
+    unlockAudio(); // 사용자가 직접 누른 클릭 시점에 오디오를 미리 깨워둬야 나중에 타이머가 자동으로 알람 울릴 때도 소리가 막히지 않는다
+    state.running = true;
+    armCountdown(intervalMin*60);
+    render();
+  }
+
+  function stopTimer(){
+    state.running = false;
+    clearInterval(state.intervalId);
+    state.remainingSec = null;
+    render();
+  }
+
+  // 클린룸 퇴실·에어샤워 등 즉시 인증이 어려운 상황을 위한 5분 연기(스누즈) 기능.
+  // 알람 1회당 딱 한 번만 허용된다 - 한 번 쓰고 나면 물을 마셔서 인증할 때까지 계속 울린다.
+  function snoozeAlarm(){
+    if(state.snoozeUsed) return;
+    state.snoozeUsed = true;
+    stopBeep();
+    stopVibrate();
+    state.alarm = false;
+    state.running = true;
+    armCountdown(5*60);
+    render();
+  }
+
+  function triggerAlarm(){
+    state.running = false;
+    state.alarm = true;
+    playBeepLoop();
+    startVibrate();
+    render();
+  }
+
+  // ---------- sound ----------
+  function unlockAudio(){
+    if(!state.audioCtx) state.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(state.audioCtx.state === 'suspended') state.audioCtx.resume();
+    const osc = state.audioCtx.createOscillator();
+    const gain = state.audioCtx.createGain();
+    gain.gain.value = 0.0001;
+    osc.connect(gain).connect(state.audioCtx.destination);
+    osc.start();
+    osc.stop(state.audioCtx.currentTime + 0.05);
+  }
+
+  function playBeepLoop(){
+    if(!state.audioCtx) state.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = state.audioCtx;
+    if(ctx.state === 'suspended') ctx.resume();
+    function beep(){
+      if(!state.alarm) return;
+      if(ctx.state === 'suspended') ctx.resume(); // 모바일에서 화면이 잠깐 꺼졌다 켜졌을 때도 재개 시도
+      [880, 1046.5].forEach((freq, i)=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        const startAt = ctx.currentTime + i*0.22;
+        gain.gain.setValueAtTime(0.0001, startAt);
+        gain.gain.linearRampToValueAtTime(1, startAt+0.02); // 최대치까지 상향
+        gain.gain.linearRampToValueAtTime(0.0001, startAt+0.22);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(startAt);
+        osc.stop(startAt+0.24);
+      });
+      state.beepId = setTimeout(beep, 550);
+    }
+    beep();
+  }
+  function stopBeep(){
+    clearTimeout(state.beepId);
+  }
+
+  // 모바일에서 화면이 꺼졌다 켜지거나 다른 앱으로 전환됐다 돌아왔을 때
+  // 오디오 컨텍스트가 일시정지된 상태로 남아있을 수 있어, 다시 활성화될 때 재개시킨다.
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && state.audioCtx && state.audioCtx.state === 'suspended'){
+      state.audioCtx.resume();
+    }
+  });
+
+  // 네트워크 연결 상태 변화를 감지해 화면에 실시간으로 표시
+  window.addEventListener('online', ()=>{ state.offline = false; render(); });
+  window.addEventListener('offline', ()=>{ state.offline = true; render(); });
+
+  // ---------- vibration ----------
+  function startVibrate(){
+    if(!navigator.vibrate) return; // iOS Safari는 진동 API 미지원
+    function pulse(){
+      if(!state.alarm) return;
+      navigator.vibrate([500, 150, 500]);
+      state.vibrateId = setTimeout(pulse, 1300);
+    }
+    pulse();
+  }
+  function stopVibrate(){
+    clearTimeout(state.vibrateId);
+    if(navigator.vibrate) navigator.vibrate(0);
+  }
+
+  // ---------- camera ----------
+  async function openCamera(){
+    state.camOpen = true;
+    state.verdict = null;
+    render();
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false });
+      state.stream = stream;
+      const video = document.getElementById('video');
+      if(video){ video.srcObject = stream; }
+    } catch(err){
+      alert(t('camDenied'));
+    }
+  }
+
+  function closeCamera(){
+    if(state.stream){ state.stream.getTracks().forEach(t=>t.stop()); state.stream=null; }
+    state.camOpen = false;
+    state.verdict = null;
+    render();
+  }
+
+  async function captureAndVerify(){
+    const video = document.getElementById('video');
+    if(!video || !video.videoWidth){ alert(t('camNotReady')); return; }
+    // 이미지가 너무 크면 업로드·AI 분석 시간이 길어져 타임아웃 위험이 커지므로
+    // 긴 변 기준 최대 800px로 축소해서 전송한다 (판별 정확도에는 지장 없는 수준).
+    const maxDim = 800;
+    const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const base64 = dataUrl.split(',')[1];
+
+    state.verdict = 'pending';
+    render();
+
+    try{
+      const response = await fetch('/api/verify', {
+        method:'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ image: base64, lang: state.lang })
+      });
+      if(!response.ok){
+        const errData = await response.json().catch(()=>({}));
+        console.error('서버 오류 상세 (' + response.status + '):', errData.error || '알 수 없음');
+        // 상태 코드별로 원인이 다르므로 에러 키만 담아서 던지고, catch에서 언어별 문구로 변환
+        if(response.status === 429) throw new Error('rateLimitError');       // AI 사용량 한도 초과
+        if(response.status === 504) throw new Error('timeoutError');       // 진짜 응답 시간 초과 (60초 넘음)
+        if(response.status === 503) throw new Error('serviceBusyError');   // AI 서버가 빠르게 "혼잡함"으로 거절한 경우
+        throw new Error('friendlyError'); // 그 외 서버 오류
+      }
+      const result = await response.json();
+      const isYes = !!result.drinking;
+      const reason = result.reason || '';
+
+      if(!isYes) state.failCount += 1; // 실제 AI 판별 실패만 통계에 반영 (네트워크 오류는 미포함)
+
+      state.verdict = isYes ? 'yes' : 'no';
+      state.verdictReason = reason;
+      render();
+      if(isYes){
+        setTimeout(()=>{ closeCamera(); completeDrink(); }, 900);
+      }
+    } catch(err){
+      state.verdict = 'no';
+      // err.message가 우리가 정의한 오류 키(rateLimitError 등)면 그 문구를, 아니면(네트워크 단절 등) networkError 문구를 사용
+      const knownKeys = ['friendlyError','rateLimitError','timeoutError','serviceBusyError','networkError'];
+      state.verdictReason = t(knownKeys.includes(err.message) ? err.message : 'networkError');
+      render();
+      console.error('AI 판별 오류 (기술적 상세):', err); // 실제 오류 원인은 개발자 콘솔에만 기록
+    }
+  }
+
+  function completeDrink(){
+    state.alarm = false;
+    stopBeep();
+    stopVibrate();
+    state.snoozeUsed = false; // 새로운 알람 주기가 시작되므로 다음 알람에서는 다시 스누즈 가능
+    state.consumedMl += state.perDrinkMl;
+    const now = new Date();
+    state.log.push({ time: now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}), ml: state.perDrinkMl, ts: now.getTime() });
+    startTimer(intervalMinutes());
+  }
+
+  function resetToday(){
+    if(!confirm(t('confirmReset'))) return;
+    state.consumedMl = 0;
+    state.log = [];
+    state.failCount = 0;
+    savePersisted();
+    render();
+  }
+
+  // ---------- persistence ----------
+  // 실제 배포된 사이트(Vercel)에서는 정상적으로 새로고침 후에도 데이터가 유지됩니다.
+  // 단, Claude 미리보기처럼 브라우저 저장소가 차단된 환경에서는 저장이 조용히 생략되고
+  // 세션 동안의 메모리 데이터로만 동작합니다(에러 없이 정상 작동).
+  function savePersisted(){
+    try{
+      localStorage.setItem('hydrocheck_state', JSON.stringify({
+        date: new Date().toDateString(),
+        goalMl: state.goalMl,
+        windowHours: state.windowHours,
+        perDrinkMl: state.perDrinkMl,
+        consumedMl: state.consumedMl,
+        log: state.log,
+        failCount: state.failCount,
+        lang: state.lang,
+        theme: state.theme,
+      }));
+    }catch(e){ /* 저장소 사용 불가 환경 - 조용히 무시 */ }
+  }
+  function loadPersisted(){
+    try{
+      const raw = localStorage.getItem('hydrocheck_state');
+      if(!raw) return;
+      const saved = JSON.parse(raw);
+      state.goalMl = saved.goalMl ?? state.goalMl;
+      state.windowHours = saved.windowHours ?? state.windowHours;
+      state.perDrinkMl = saved.perDrinkMl ?? state.perDrinkMl;
+      state.lang = saved.lang ?? state.lang;
+      state.theme = saved.theme ?? state.theme;
+      if(saved.date === new Date().toDateString()){
+        // 같은 날짜면 오늘 기록도 그대로 복원
+        state.consumedMl = saved.consumedMl ?? 0;
+        state.log = saved.log ?? [];
+        state.failCount = saved.failCount ?? 0;
+      }
+      // 날짜가 다르면 설정값만 유지하고 오늘 기록은 새로 시작
+    }catch(e){ /* 저장소 사용 불가 환경 - 조용히 무시 */ }
+  }
+
+  // ---------- clock (언어별 시간대: 한국어=서울, 영어=미국 수도 워싱턴 D.C., 일본어=도쿄) ----------
+  // 참고: 워싱턴 D.C.와 뉴욕은 같은 동부시간대(America/New_York)를 사용하므로 시간 값은 동일합니다.
+  const CLOCK_CONFIG = {
+    ko: { timeZone: 'Asia/Seoul', label: 'KST' },
+    en: { timeZone: 'America/New_York', label: 'ET' },
+    ja: { timeZone: 'Asia/Tokyo', label: 'JST' },
+  };
+  function updateClock(){
+    const el = document.getElementById('clockDisplay');
+    if(!el) return;
+    const cfg = CLOCK_CONFIG[state.lang] || CLOCK_CONFIG.ko;
+    const now = new Date();
+    // 언어와 무관하게 항상 영문 AM/PM 표기로 통일해서 표시
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: cfg.timeZone, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+    }).formatToParts(now);
+    const get = type => parts.find(p=>p.type===type).value;
+    let h = parseInt(get('hour'), 10);
+    const m = get('minute');
+    const s = get('second');
+    const ampm = h < 12 ? 'AM' : 'PM';
+    h = h % 12; if(h === 0) h = 12;
+    const hh = String(h).padStart(2,'0');
+    el.textContent = `${hh}:${m}:${s} ${ampm} ${cfg.label}`;
+  }
+  setInterval(updateClock, 1000);
+
+  loadPersisted();
+  render();
+  updateClock();
+})();
+</script>
+</body>
+</html>
