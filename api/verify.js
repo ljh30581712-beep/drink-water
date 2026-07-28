@@ -42,27 +42,30 @@ export default async function handler(req, res) {
     '{"drinking": true 또는 false, "reason": "짧은 이유"}\n' +
     reasonLangInstruction;
 
-  try {
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
+  const MODEL = 'gemini-3.5-flash-lite'; // 단순 YES/NO 판별 작업이라 더 가볍고 빠른 lite 모델 사용
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const requestBody = JSON.stringify({
+    contents: [
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: promptText },
-                { inline_data: { mime_type: 'image/jpeg', data: image } },
-              ],
-            },
-          ],
-        }),
-      }
-    );
+        parts: [
+          { text: promptText },
+          { inline_data: { mime_type: 'image/jpeg', data: image } },
+        ],
+      },
+    ],
+  });
+
+  // 자동 재시도 없이 1번만 시도한다. 실패하면 화면의 "다시 촬영하기" 버튼으로
+  // 사용자가 직접 수동으로 재시도한다.
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: requestBody,
+    });
 
     if (!response.ok) {
       const errText = await response.text();
