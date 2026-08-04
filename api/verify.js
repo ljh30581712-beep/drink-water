@@ -42,8 +42,9 @@ export default async function handler(req, res) {
     '{"drinking": true 또는 false, "reason": "짧은 이유"}\n' +
     reasonLangInstruction;
 
-  const MODEL = 'gemini-3.5-flash-lite'; // gemini-2.5-flash는 서비스 종료(단종)되어 404 발생 - 정상 지원되는 3.5-flash-lite로 복구
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const PRIMARY_MODEL = 'gemini-3.5-flash';       // 우선 시도할 모델 (더 정교함)
+  const FALLBACK_MODEL = 'gemini-3.5-flash-lite'; // 실패 시 1회만 대체 시도할 모델 (같은 구글 서비스라 추가 비용 없음)
+  const urlFor = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const requestBody = JSON.stringify({
     contents: [
       {
@@ -55,10 +56,8 @@ export default async function handler(req, res) {
     ],
   });
 
-  // 자동 재시도 없이 1번만 시도한다. 실패하면 화면의 "다시 촬영하기" 버튼으로
-  // 사용자가 직접 수동으로 재시도한다.
-  try {
-    const response = await fetch(url, {
+  async function callGemini(model) {
+    return fetch(urlFor(model), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -66,10 +65,26 @@ export default async function handler(req, res) {
       },
       body: requestBody,
     });
+  }
+
+  // gemini-3.5-flash로 먼저 시도하고, 실패하면(혼잡 등) 딱 1번만
+  // gemini-3.5-flash-lite로 대체 시도한다. 같은 구글 계정/무료 사용량 안에서
+  // 모델만 바꾸는 것이라 추가 비용이 들지 않는다.
+  try {
+    let response = await callGemini(PRIMARY_MODEL);
+    let lastErrText = '';
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.error('Gemini API 오류 상세:', response.status, errText);
+      lastErrText = await response.text();
+      console.warn(`Gemini(${PRIMARY_MODEL}) 실패 - ${FALLBACK_MODEL}로 대체 시도`, response.status);
+      response = await callGemini(FALLBACK_MODEL);
+      if (!response.ok) {
+        lastErrText = await response.text();
+      }
+    }
+
+    if (!response.ok) {
+      console.error('Gemini API 오류 상세:', response.status, lastErrText);
       return res.status(response.status).json({ error: 'AI_API_ERROR' });
     }
 
