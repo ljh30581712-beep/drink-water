@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     '{"drinking": true 또는 false, "reason": "짧은 이유"}\n' +
     reasonLangInstruction;
 
-  const MODEL = 'gemini-2.5-flash'; // 3.5 세대 전체가 혼잡한 것으로 의심되어, 검증된 2.5 세대로 임시 전환
+  const MODEL = 'gemini-3.5-flash-lite'; // gemini-2.5-flash는 서비스 종료(단종)되어 404 발생 - 정상 지원되는 3.5-flash-lite로 복구
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
   const requestBody = JSON.stringify({
     contents: [
