@@ -251,12 +251,12 @@ const { useState, useEffect, useRef, useCallback } = (() => {
     failCount: 0,
     theme: 'dark', // 'dark' | 'light'
     offline: (typeof navigator !== 'undefined' && 'onLine' in navigator) ? !navigator.onLine : false,
-    snoozeUsed: false, // 알람 1회당 스누즈는 단 한 번만 허용
-    user: null,        // 로그인 안 하면 null (게스트 모드, 기존처럼 브라우저에만 저장)
-    authReady: false,  // 로그인 상태 확인이 끝났는지 (깜빡임 방지용)
-    syncing: false,    // 클라우드 저장/불러오기 진행 중 표시
+    snoozeUsed: false,  // 알람 1회당 스누즈는 단 한 번만 허용
+    user: null,         // 로그인 안 하면 null (게스트 모드, 기존처럼 브라우저에만 저장)
+    authReady: false,   // 로그인 상태 확인이 끝났는지 (깜빡임 방지용)
+    syncing: false,     // 클라우드 저장/불러오기 진행 중 표시
     historyOpen: false,
-    history: [],       // 로그인 시 불러온 지난 기록 목록
+    history: [],        // 로그인 시 불러온 지난 기록 목록
   };
 
   // ---------- i18n ----------
