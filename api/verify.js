@@ -1,5 +1,5 @@
 // api/verify.js
-// 이 파일은 서버(Vercel)에서만 실행됩니다. 브라우저는 절대 이 코드를 직접 볼 수 없고,
+// 이 파일은 서버(Vercel)에서만 실행됩니다.  브라우저는 절대 이 코드를 직접 볼 수 없고,
 // API 키도 여기 환경변수로만 존재하므로 안전합니다.
 
 export default async function handler(req, res) {
