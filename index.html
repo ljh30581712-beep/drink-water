@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HydroCheck · AI 음수 인증 시스템</title>
+<meta name="description" content="AI Vision으로 실제 음수 행동을 검증하는 반도체 팹 근로자용 수분 섭취 관제 시스템 (NAVER OGQ마켓 AI Competition 출품작)">
+<meta property="og:title" content="HydroCheck · AI 음수 인증 시스템">
+<meta property="og:description" content="정해진 시간에 알람이 울리고, 실제로 물 마시는 모습을 AI가 판별해야 알람이 꺼집니다.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%A7%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" id="themeColorMeta" content="#0D1319">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #0D1319;
+    --panel: #141C24;
+    --panel-2: #1B2530;
+    --line: #263241;
+    --teal: #5EEAD4;
+    --teal-dim: #2C7A6E;
+    --amber: #FBBF24;
+    --red: #F87171;
+    --text: #E7EEF3;
+    --text-dim: #7C8CA0;
+  }
+  body.light{
+    --bg: #F4F7F8;
+    --panel: #FFFFFF;
+    --panel-2: #EEF3F5;
+    --line: #DCE4E9;
+    --teal: #0E9C8C;
+    --teal-dim: #BFEAE3;
+    --amber: #D97706;
+    --red: #DC2626;
+    --text: #16222A;
+    --text-dim: #64768A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 20% -10%, #16202C 0%, transparent 45%),
+      radial-gradient(circle at 100% 110%, #142027 0%, transparent 50%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding: 28px 16px 60px;
+    transition: background-color .25s ease, color .25s ease;
+  }
+  body.light{
+    background:
+      radial-gradient(circle at 20% -10%, #FFFFFF 0%, transparent 45%),
+      radial-gradient(circle at 100% 110%, #E8F3F1 0%, transparent 50%),
+      var(--bg);
+  }
+  .app{ width:100%; max-width:480px; }
+
+  /* header */
+  .hdr{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; }
+  .hdr .tag{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.18em; color:var(--teal); }
+  .hdr h1{ font-size:20px; font-weight:700; letter-spacing:-0.01em; margin-top:4px; }
+  .status-dot{ width:8px; height:8px; border-radius:50%; background:var(--text-dim); display:inline-block; margin-right:6px; }
+  .status-dot.on{ background:var(--teal); box-shadow:0 0 8px var(--teal); }
+  .status-dot.alarm{ background:var(--amber); box-shadow:0 0 10px var(--amber); animation:pulse 1s infinite; }
+  @keyframes pulse{ 50%{opacity:.35;} }
+  .status-line{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); text-align:right; }
+  .clock-display{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--teal); margin-bottom:4px; letter-spacing:.02em; }
+  .offline-badge{ color:var(--red); font-weight:600; margin-right:8px; }
+  .online-badge{ color:var(--teal); font-weight:600; margin-right:8px; }
+
+  .account-row{ margin-top:10px; }
+  .account-info{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .account-avatar{ width:22px; height:22px; border-radius:50%; }
+  .account-name{ font-size:12px; color:var(--text-dim); }
+  .sync-dot{
+    width:7px; height:7px; border-radius:50%; background:var(--teal);
+    animation: pulse 1s infinite ease-in-out;
+  }
+  @keyframes pulse{ 0%,100%{opacity:0.3;} 50%{opacity:1;} }
+  .guest-note{
+    font-size:11px; color:var(--text-dim); background:var(--panel-2);
+    border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-top:8px;
+    line-height:1.5;
+  }
+
+  /* ring */
+  .ring-wrap{ position:relative; width:260px; height:260px; margin: 8px auto 20px; }
+  svg.ring{ transform:rotate(-90deg); width:100%; height:100%; }
+  .ring-bg{ fill:none; stroke:var(--panel-2); stroke-width:10; }
+  .ring-fg{ fill:none; stroke:var(--teal); stroke-width:10; stroke-linecap:round; transition: stroke-dashoffset .5s ease, stroke .3s; }
+  .ring-fg.alarm{ stroke:var(--amber); }
+  .ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring-time{ font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:700; letter-spacing:-0.01em; }
+  .ring-sub{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim); margin-top:6px; letter-spacing:.08em; }
+  .ring-ticks{ position:absolute; inset:0; }
+
+  /* buttons */
+  .row{ display:flex; gap:10px; margin-bottom:14px; }
+  button{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:14px;
+    border-radius:10px; border:1px solid var(--line); cursor:pointer;
+    padding:13px 16px; color:var(--text); background:var(--panel-2);
+    transition: all .15s;
+  }
+  button:hover{ border-color:var(--teal); }
+  button:active{ transform:scale(.98); }
+  button.primary{ background:var(--teal); color:#08161A; border-color:var(--teal); flex:1; }
+  button.primary:hover{ background:#7EF3E1; }
+  button.ghost{ flex:1; }
+  button.danger{ border-color:var(--red); color:var(--red); }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  button.full{ width:100%; }
+
+  /* panels */
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:14px; }
+  .panel h2{ font-size:12px; letter-spacing:.1em; color:var(--text-dim); text-transform:uppercase; margin-bottom:12px; font-family:'JetBrains Mono',monospace; }
+
+  .settings-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .field label{ display:block; font-size:11px; color:var(--text-dim); margin-bottom:6px; font-family:'JetBrains Mono',monospace; }
+  .field input{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; padding:9px 8px; font-family:'JetBrains Mono',monospace; font-size:14px;
+  }
+  .field input:focus{ outline:none; border-color:var(--teal); }
+  .derived{ margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--teal-dim); }
+  .derived b{ color:var(--teal); }
+
+  .progress-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .progress-row .num{ font-family:'JetBrains Mono',monospace; font-size:15px; }
+  .progress-row .num b{ color:var(--teal); font-size:19px; }
+  .bar{ height:6px; background:var(--panel-2); border-radius:4px; overflow:hidden; }
+  .bar-fill{ height:100%; background:var(--teal); transition:width .4s ease; }
+
+  .log{ margin-top:10px; display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto; }
+  .log-item{ display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim); border-bottom:1px dashed var(--line); padding-bottom:5px; }
+  .log-item span:last-child{ color:var(--teal); }
+  .empty{ font-size:12px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; }
+
+  /* camera modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(5,9,12,.88); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal{ background:var(--panel); border:1px solid var(--line); border-radius:16px; width:100%; max-width:420px; padding:20px; }
+  .modal h3{ font-size:16px; margin-bottom:4px; }
+  .modal p.desc{ font-size:12px; color:var(--text-dim); margin-bottom:14px; }
+
+  .consent-overlay{
+    position:fixed; inset:0; background:rgba(5,9,12,.95); backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center; z-index:200; padding:20px;
+  }
+  .consent-modal{
+    background:var(--panel); border:1px solid var(--teal-dim); border-radius:16px;
+    width:100%; max-width:420px; padding:22px;
+  }
+  .consent-modal h3{ font-size:16px; margin-bottom:10px; color:var(--teal); }
+  .consent-modal .body{ font-size:12.5px; color:var(--text); line-height:1.8; margin-bottom:16px; }
+  .consent-check-row{
+    display:flex; align-items:flex-start; gap:8px; margin-bottom:14px;
+    font-size:12.5px; color:var(--text-dim); cursor:pointer;
+  }
+  .consent-check-row input{ margin-top:2px; width:16px; height:16px; accent-color:var(--teal); flex-shrink:0; }
+
+  .screen-flash{
+    position:fixed; inset:0; background:#fff; z-index:300;
+    opacity:0; pointer-events:none;
+  }
+  .screen-flash.on{ opacity:1; transition:opacity 60ms ease-out; }
+  .screen-flash.off{ opacity:0; transition:opacity 260ms ease-in; }
+
+  .help-btn{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:50%;
+    width:24px; height:24px; font-size:12px; color:var(--text-dim); cursor:pointer;
+    margin-left:8px; line-height:1; display:inline-flex; align-items:center; justify-content:center;
+  }
+  .help-tabs{ display:flex; gap:6px; margin-bottom:14px; }
+  .help-tab-btn{
+    flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+    padding:8px; font-size:12.5px; color:var(--text-dim); cursor:pointer;
+  }
+  .help-tab-btn.active{ border-color:var(--teal); color:var(--teal); background:rgba(94,234,212,.08); }
+  .faq-item{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; margin-bottom:8px;
+  }
+  .faq-q{ font-size:12.5px; font-weight:700; color:var(--text); margin-bottom:4px; }
+  .faq-a{ font-size:12px; color:var(--text-dim); line-height:1.6; }
+  .settings-panel-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom:1px solid var(--line); font-size:12.5px;
+  }
+  .settings-panel-row:last-child{ border-bottom:none; }
+  video, canvas{ width:100%; border-radius:10px; background:#000; }
+  #video.mirror{ transform:scaleX(-1); } /* 전면 카메라일 때만 거울처럼 반전 (후면 카메라는 반전 안 함). 실제 캡처 이미지는 원본 그대로 유지되어 AI 분석엔 영향 없음 */
+  .video-wrap{ position:relative; margin-bottom:14px; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+
+  .flash-icon-btn{
+    position:absolute; top:10px; right:10px; z-index:5;
+    width:34px; height:34px; border-radius:50%;
+    background:rgba(20,28,36,.65); backdrop-filter:blur(3px);
+    border:1.5px solid rgba(255,255,255,.35); color:rgba(255,255,255,.75);
+    font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:all .15s ease;
+  }
+  .flash-icon-btn.active{
+    background:#FFB627; border-color:#FFB627; color:#241a00;
+    box-shadow:0 0 10px rgba(255,182,39,.6);
+  }
+  .verdict{ margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:13px; padding:10px; border-radius:8px; }
+  .verdict.pending{ background:var(--panel-2); color:var(--text-dim); }
+  .verdict.yes{ background:rgba(94,234,212,.12); color:var(--teal); border:1px solid var(--teal-dim); }
+  .verdict.no{ background:rgba(248,113,113,.1); color:var(--red); border:1px solid #7A3535; }
+  body.light .verdict.no{ background:rgba(220,38,38,.08); border:1px solid #F3B4B4; }
+  body.light .verdict.yes{ background:rgba(14,156,140,.1); }
+
+  .footnote{ font-size:11px; color:var(--text-dim); line-height:1.6; text-align:center; margin-top:18px; }
+
+  .lang-switch{ display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; align-items:center; }
+  .lang-btn{
+    font-family:'JetBrains Mono',monospace; font-size:10px; padding:4px 8px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim); cursor:pointer;
+  }
+  .lang-btn.active{ border-color:var(--teal); color:var(--teal); background:rgba(94,234,212,.08); }
+
+  .lang-select{
+    font-family:'JetBrains Mono',monospace; font-size:12px; padding:6px 10px; border-radius:8px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--teal); cursor:pointer;
+    max-width:100%;
+  }
+
+  .theme-switch{ display:flex; gap:4px; }
+  .theme-btn{
+    font-size:13px; padding:4px 9px; border-radius:6px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim); cursor:pointer;
+    line-height:1.4;
+  }
+  .theme-btn.active{ border-color:var(--teal); color:var(--teal); background:rgba(94,234,212,.08); }
+
+  .stats-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .stat-box{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 6px; text-align:center; }
+  .stat-num{ font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; color:var(--text); }
+  .stat-label{ font-size:10px; color:var(--text-dim); margin-top:2px; }
+
+  .judge-banner{
+    background:rgba(94,234,212,.08); border:1px solid var(--teal-dim); color:var(--teal);
+    font-size:12px; padding:10px 12px; border-radius:10px; text-align:center; margin-bottom:14px;
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="screen-flash" id="screenFlash"></div>
+
+<script>
+const { useState, useEffect, useRef, useCallback } = (() => {
+  // minimal vanilla state engine (no React dependency)
+  return {};
+})();
+</script>
+
+<script type="text/babel" data-presets="react"></script>
+
+<!-- Firebase (선택적 로그인 + 클라우드 저장을 위한 SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  // ⚠️ 아래 값을 본인의 Firebase 프로젝트 설정값으로 반드시 교체하세요.
+  // Firebase 콘솔(console.firebase.google.com) → 프로젝트 설정 → 일반 → "내 앱" 하단의 SDK 설정에서 확인 가능합니다.
+  // 이 값들은 브라우저에 그대로 노출되어도 안전하도록 설계되어 있습니다(Firebase 표준 방식).
+  // 실제 데이터 보호는 Firestore 보안 규칙(Security Rules)이 담당합니다.
+  const firebaseConfig = {
+    apiKey: "AIzaSyDi0OOVgGxItHEGATw1qgOvU10y5wxzyjU",
+    authDomain: "water-cycle-381dd.firebaseapp.com",
+    projectId: "water-cycle-381dd",
+    storageBucket: "water-cycle-381dd.firebasestorage.app",
+    messagingSenderId: "500263893719",
+    appId: "1:500263893719:web:f66bea58fc8f965aaece92",
+  };
+  let firebaseReady = false;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    firebaseReady = true;
+  }catch(e){
+    console.warn('Firebase 초기화 실패 - firebaseConfig 값을 확인해주세요.', e);
+  }
+</script>
+
+<!-- Plain JS implementation (no framework) -->
+<script>
+(function(){
+
+  const appEl = document.getElementById('app');
+
+  // ---------- state ----------
+  let state = {
+    goalMl: 3500,
+    windowHours: 9,
+    perDrinkMl: 200,
+    running: false,
+    remainingSec: null,
+    intervalId: null,
+    alarm: false,
+    consumedMl: 0,
+    log: [],           // {time, ml}
+    camOpen: false,
+    stream: null,
+    verdict: null,      // null | 'pending' | 'yes' | 'no'
+    verdictReason: '',
+    audioCtx: null,
+    beepId: null,
+    vibrateId: null,
+    lang: 'ko',
+    privacyConsented: false, // 최초 1회 개인정보 고지 동의 여부 (동의 전엔 앱 사용 불가)
+    consentChecked: false,   // 동의 모달 안의 체크박스 상태 (필수)
+    dontShowAgainChecked: false, // "다시 표시하지 않기" 체크박스 상태 (선택)
+    screenFlashOn: false,    // 촬영 시 화면 플래시 사용 여부 (기본값 꺼짐, 필요시 사용자가 켤 수 있음). 전면 카메라엔 물리 플래시가 없어 화면 밝기로 대체, 판별 정확도 향상용
+    helpOpen: false,
+    helpTab: 'faq', // 'faq' | 'settings'
+    vibrationEnabled: true,     // 진동 켜기/끄기
+    alarmSound: 'siren',        // 'siren' | 'bell' - 알람음 종류
+    cameraFacing: 'user',       // 'user'(전면) | 'environment'(후면)
+    dayStartHour: 0,            // 하루 시작 기준 시각 (0~23). 교대근무자용 - 예: 6이면 새벽 6시가 "오늘"의 시작
+    failCount: 0,
+    theme: 'dark', // 'dark' | 'light'
+    offline: (typeof navigator !== 'undefined' && 'onLine' in navigator) ? !navigator.onLine : false,
+    snoozeUsed: false, // 알람 1회당 스누즈는 단 한 번만 허용
+    user: null,        // 로그인 안 하면 null (게스트 모드, 기존처럼 브라우저에만 저장)
+    authReady: false,  // 로그인 상태 확인이 끝났는지 (깜빡임 방지용)
+    syncing: false,    // 클라우드 저장/불러오기 진행 중 표시
+    historyOpen: false,
+    history: [],       // 로그인 시 불러온 지난 기록 목록
+  };
+
+  // ---------- i18n ----------
+  const I18N = {
+    ko: {
+      tag: 'HYDRA-01 · 클린룸 수분 관제',
+      title: '수분 섭취 관제',
+      statusAlarm: '음수 확인 필요',
+      statusOn: '가동 중',
+      statusOff: '대기',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`NEXT IN ${m}MIN 주기`,
+      ringIdleSub: (m)=>`주기 ${m}분`,
+      btnStart: '타이머 시작',
+      btnStop: '타이머 정지',
+      btnOpenCam: '📷 물 마시는 영상 촬영',
+      todayIntakeTitle: '오늘 섭취 현황',
+      emptyLog: '아직 기록이 없습니다',
+      settingsTitle: '설정',
+      labelGoal: '목표(ml/일)',
+      labelWindow: '근무시간(h)',
+      labelDrink: '1회 섭취(ml)',
+      derived: (min, ml, count)=>`약 ${min}분마다 ${ml}ml씩, 하루 총 ${count}회 섭취`,
+      footnote: '성인 하루 권장 수분량 2.5L 기준, 방진복 착용 클린룸 근무자는 유산소 운동 1시간 수준의 발한이 있다고 가정해 3.5L로 상향했습니다.<br>촬영 영상은 프레임 1장만 AI 판별에 사용되며 서버에 저장되지 않습니다.',
+      modalTitle: '음수 인증 촬영',
+      modalDesc: '물을 마시는 장면이 잘 보이도록 카메라를 향해 촬영해주세요.',
+      verdictPending: 'AI 판별 중...',
+      verdictYes: (r)=>`✔ 음수 확인 완료${r?' · '+r:''}. 타이머를 재시작합니다.`,
+      verdictNo: (r)=>`✘ 확인되지 않았습니다${r?' · '+r:''}. 다시 촬영해주세요.`,
+      btnCancel: '취소',
+      btnCapture: '촬영 및 판별',
+      camDenied: '카메라 접근에 실패했습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.',
+      camNotReady: '카메라가 아직 준비되지 않았습니다.',
+      genericError: '오류: ',
+      btnTest: '⚡ 지금 알람 테스트 (심사용)',
+      btnRetry: '🔄 다시 촬영하기',
+      statsTitle: '음수 인증 통계',
+      statsAttempts: '총 시도',
+      statsSuccess: '성공',
+      statsFail: '실패',
+      statsRate: '성공률',
+      statsAvgInterval: '평균 간격',
+      statsNoData: '아직 데이터가 없습니다',
+      minUnit: '분',
+      judgeBanner: '👆 아래 "지금 알람 테스트" 버튼으로 대기 없이 바로 체험해보실 수 있어요',
+      friendlyError: '일시적인 오류가 발생했습니다. 다시 시도해주세요.',
+      rateLimitError: 'AI 사용 한도를 모두 사용했습니다. 잠시 후 다시 시도해주세요.',
+      timeoutError: 'AI 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.',
+      serviceBusyError: 'AI 서버가 일시적으로 혼잡합니다. 잠시 후 다시 시도해주세요.',
+      networkError: '네트워크 연결을 확인해주세요.',
+      btnResetToday: '🗑️ 오늘 기록 초기화',
+      btnSnooze: '⏰ 5분 연기 (1회만 가능)',
+      confirmReset: '오늘의 섭취 기록과 통계를 초기화할까요? 이 작업은 되돌릴 수 없습니다.',
+      offlineLabel: '오프라인',
+      onlineLabel: '온라인',
+      btnLogin: '🔐 로그인하고 기록 저장',
+      btnLogout: '로그아웃',
+      guestNote: '지금은 게스트 모드예요. 로그인하면 기기를 바꿔도 기록이 유지돼요. 로그인 없이도 계속 이용할 수 있어요.',
+      syncingNote: '기록을 불러오는 중...',
+      loginError: '로그인에 실패했습니다. 다시 시도해주세요.',
+      btnHistory: '📅 지난 기록 보기',
+      historyTitle: '지난 기록',
+      historyEmpty: '아직 저장된 기록이 없습니다.',
+      historyClose: '닫기',
+      consentTitle: '시작하기 전에 확인해주세요',
+      consentBody: '이 서비스는 물 마시는 모습을 카메라로 촬영해 AI가 판별합니다.<br><br>· 촬영된 사진은 <b>판별 목적으로 1회만 사용</b>되며,<br>&nbsp;&nbsp;판별 즉시 <b>서버에 저장되지 않고 폐기</b>됩니다.<br>· 얼굴 인식이나 신원 식별에는 사용되지 않습니다.<br>· 이 서비스는 <b>선택 사항</b>이며, 언제든 사용을 중단할 수 있습니다.',
+      consentCheckbox: '위 내용을 확인했으며 동의합니다',
+      consentBtn: '확인했습니다, 시작하기',
+      dontShowAgain: '다시 표시하지 않기',
+      flashOn: '⚡ 화면 플래시 켜짐',
+      flashOff: '⚡ 화면 플래시 꺼짐',
+      helpBtnLabel: '도움말 및 설정',
+      helpTabFaq: '❓ 자주 묻는 질문',
+      helpTabSettings: '⚙️ 설정',
+      faqQ1: '알람 소리가 안 울려요',
+      faqA1: '아이폰 옆면의 <b>무음 스위치</b>(주황색이 보이면 무음 모드)가 켜져 있으면 소리가 안 나요. 무음 모드를 꺼주세요. 무음 모드에서도 <b>진동은 정상 작동</b>합니다 (단, 진동 기능은 iOS Safari에서는 지원되지 않아요).',
+      faqQ2: 'AI 판별에 계속 실패해요',
+      faqA2: '조명이 어두우면 화면 플래시를 켜보세요. 그래도 안 되면 "다시 촬영하기"로 재시도하거나, 서버가 일시적으로 혼잡한 것일 수 있으니 잠시 후 다시 시도해주세요.',
+      faqQ3: '카메라가 안 켜져요',
+      faqA3: '브라우저 설정에서 카메라 권한이 허용되어 있는지 확인해주세요. 재시도 후에도 안 되면 페이지를 새로고침해보세요.',
+      faqQ4: '5분 연기(스누즈) 버튼이 안 보여요',
+      faqA4: '스누즈는 알람 1회당 딱 한 번만 사용할 수 있어요. 이미 한 번 사용했다면, 다시 울릴 때는 실제로 물을 마셔야 알람이 꺼져요.',
+      faqQ5: '기록이 사라졌어요',
+      faqA5: '로그인하지 않으면 기록은 이 브라우저에만 저장돼요. 브라우저를 지우거나 기기를 바꾸면 사라질 수 있어요. Google 로그인을 하면 기록이 클라우드에 저장되어 유지됩니다.',
+      settingsVibrationLabel: '진동',
+      vibrationOn: '켜짐',
+      vibrationOff: '꺼짐',
+      settingsSoundLabel: '알람음 선택',
+      sound_siren: '사이렌 (기본)',
+      sound_bell: '부드러운 종소리',
+      sound_digital: '디지털 삐삐',
+      settingsCameraLabel: '카메라 방향',
+      cameraFront: '전면',
+      cameraBack: '후면',
+      settingsDayStartLabel: '하루 시작 시간 (교대근무용)',
+      dayStartHint: '설정한 시각 이전은 "어제"로 계산됩니다. 예: 6으로 설정하면 새벽 6시가 하루의 시작이에요. 기본값은 0시(자정)입니다.',
+    },
+    en: {
+      tag: 'HYDRA-01 · CLEANROOM HYDRATION',
+      title: 'Hydration Control',
+      statusAlarm: 'Verification needed',
+      statusOn: 'Running',
+      statusOff: 'Idle',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`NEXT IN ${m}MIN`,
+      ringIdleSub: (m)=>`Cycle ${m}min`,
+      btnStart: 'Start Timer',
+      btnStop: 'Stop Timer',
+      btnOpenCam: '📷 Record Drinking Video',
+      todayIntakeTitle: "Today's Intake",
+      emptyLog: 'No records yet',
+      settingsTitle: 'Settings',
+      labelGoal: 'Goal (ml/day)',
+      labelWindow: 'Shift (h)',
+      labelDrink: 'Per drink (ml)',
+      derived: (min, ml, count)=>`About ${ml}ml every ${min}min, ${count} times/day total`,
+      footnote: 'Based on the recommended 2.5L daily intake for adults, raised to 3.5L assuming cleanroom workers in protective suits sweat roughly as much as an hour of aerobic exercise.<br>Only a single frame is used for AI verification and is not stored on any server.',
+      modalTitle: 'Drink Verification',
+      modalDesc: 'Point the camera so your drinking motion is clearly visible.',
+      verdictPending: 'AI analyzing...',
+      verdictYes: (r)=>`✔ Verified${r?' · '+r:''}. Restarting timer.`,
+      verdictNo: (r)=>`✘ Not verified${r?' · '+r:''}. Please try again.`,
+      btnCancel: 'Cancel',
+      btnCapture: 'Capture & Verify',
+      camDenied: 'Camera access failed. Please allow camera permission in your browser settings.',
+      camNotReady: 'Camera is not ready yet.',
+      genericError: 'Error: ',
+      btnTest: '⚡ Trigger Alarm Now (Demo)',
+      btnRetry: '🔄 Retake Photo',
+      statsTitle: 'Verification Stats',
+      statsAttempts: 'Attempts',
+      statsSuccess: 'Success',
+      statsFail: 'Failed',
+      statsRate: 'Success Rate',
+      statsAvgInterval: 'Avg Interval',
+      statsNoData: 'No data yet',
+      minUnit: 'min',
+      judgeBanner: '👆 Try the "Trigger Alarm Now" button below to skip the wait',
+      friendlyError: 'A temporary error occurred. Please try again.',
+      rateLimitError: 'AI usage limit reached. Please try again later.',
+      timeoutError: 'The AI took too long to respond. Please try again.',
+      serviceBusyError: 'The AI service is temporarily busy. Please try again shortly.',
+      networkError: 'Please check your network connection.',
+      btnResetToday: '🗑️ Reset Today\'s Records',
+      btnSnooze: '⏰ Snooze 5 min (once only)',
+      confirmReset: 'Reset today\'s intake records and stats? This cannot be undone.',
+      offlineLabel: 'Offline',
+      onlineLabel: 'Online',
+      btnLogin: '🔐 Sign in to save history',
+      btnLogout: 'Sign out',
+      guestNote: "You're in guest mode. Sign in to keep your history across devices. You can keep using the app without signing in.",
+      syncingNote: 'Loading your history...',
+      loginError: 'Sign-in failed. Please try again.',
+      btnHistory: '📅 View history',
+      historyTitle: 'History',
+      historyEmpty: 'No saved records yet.',
+      historyClose: 'Close',
+      consentTitle: 'Before you start',
+      consentBody: 'This service uses your camera to verify that you\'re drinking water.<br><br>· Photos are used <b>only once, for verification</b>,<br>&nbsp;&nbsp;then <b>deleted immediately</b> — never stored on any server.<br>· No facial recognition or identity check is performed.<br>· Using this service is <b>optional</b>, and you may stop anytime.',
+      consentCheckbox: 'I have read and agree to the above',
+      consentBtn: 'Got it, let\'s start',
+      dontShowAgain: 'Don\'t show this again',
+      flashOn: '⚡ Screen flash: On',
+      flashOff: '⚡ Screen flash: Off',
+      helpBtnLabel: 'Help & Settings',
+      helpTabFaq: '❓ FAQ',
+      helpTabSettings: '⚙️ Settings',
+      faqQ1: 'The alarm makes no sound',
+      faqA1: 'If your iPhone\'s <b>mute switch</b> (side switch showing orange) is on, sound is blocked. Turn off mute mode. <b>Vibration still works</b> in mute mode (note: vibration isn\'t supported on iOS Safari).',
+      faqQ2: 'AI verification keeps failing',
+      faqA2: 'Try turning on the screen flash in low light. If it still fails, tap "Retake Photo" — the AI server may be temporarily busy, so try again shortly.',
+      faqQ3: 'The camera won\'t turn on',
+      faqA3: 'Check that camera permission is allowed in your browser settings. If it still doesn\'t work, try refreshing the page.',
+      faqQ4: 'The 5-min snooze button is missing',
+      faqA4: 'Snooze can only be used once per alarm. If you\'ve already used it, the next time it rings you must actually drink water to turn it off.',
+      faqQ5: 'My records disappeared',
+      faqA5: 'Without signing in, records are saved only in this browser and may be lost if you clear it or switch devices. Sign in with Google to keep records in the cloud.',
+      settingsVibrationLabel: 'Vibration',
+      vibrationOn: 'On',
+      vibrationOff: 'Off',
+      settingsSoundLabel: 'Alarm Sound',
+      sound_siren: 'Siren (default)',
+      sound_bell: 'Soft Bell',
+      sound_digital: 'Digital Beep',
+      settingsCameraLabel: 'Camera',
+      cameraFront: 'Front',
+      cameraBack: 'Back',
+      settingsDayStartLabel: 'Day Start Time (for shift work)',
+      dayStartHint: 'Times before this hour count as "yesterday". E.g. set 6 to start your day at 6 AM. Default is midnight (0).',
+    },
+    ja: {
+      tag: 'HYDRA-01 · クリーンルーム水分管制',
+      title: '水分補給管制',
+      statusAlarm: '飲水確認が必要',
+      statusOn: '稼働中',
+      statusOff: '待機',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`次まで${m}分`,
+      ringIdleSub: (m)=>`周期 ${m}分`,
+      btnStart: 'タイマー開始',
+      btnStop: 'タイマー停止',
+      btnOpenCam: '📷 飲水シーンを撮影',
+      todayIntakeTitle: '本日の摂取状況',
+      emptyLog: 'まだ記録がありません',
+      settingsTitle: '設定',
+      labelGoal: '目標(ml/日)',
+      labelWindow: '勤務時間(h)',
+      labelDrink: '1回摂取量(ml)',
+      derived: (min, ml, count)=>`約${min}分ごとに${ml}mlずつ、1日合計${count}回摂取`,
+      footnote: '成人の1日推奨水分摂取量2.5Lを基準に、防塵服着用のクリーンルーム勤務者は有酸素運動1時間相当の発汗があると想定し3.5Lに引き上げました。<br>撮影映像はAI判定のため1フレームのみ使用され、サーバーには保存されません。',
+      modalTitle: '飲水認証撮影',
+      modalDesc: '水を飲む様子がよく見えるようにカメラに向けて撮影してください。',
+      verdictPending: 'AI判定中...',
+      verdictYes: (r)=>`✔ 確認完了${r?' · '+r:''}。タイマーを再開します。`,
+      verdictNo: (r)=>`✘ 確認できませんでした${r?' · '+r:''}。もう一度撮影してください。`,
+      btnCancel: 'キャンセル',
+      btnCapture: '撮影して判定',
+      camDenied: 'カメラへのアクセスに失敗しました。ブラウザの設定でカメラ権限を許可してください。',
+      camNotReady: 'カメラがまだ準備できていません。',
+      genericError: 'エラー: ',
+      btnTest: '⚡ 今すぐアラームテスト（デモ用）',
+      btnRetry: '🔄 再撮影する',
+      statsTitle: '飲水認証統計',
+      statsAttempts: '総試行回数',
+      statsSuccess: '成功',
+      statsFail: '失敗',
+      statsRate: '成功率',
+      statsAvgInterval: '平均間隔',
+      statsNoData: 'まだデータがありません',
+      minUnit: '分',
+      judgeBanner: '👆 下の「今すぐアラームテスト」ボタンで待たずにすぐ体験できます',
+      friendlyError: '一時的なエラーが発生しました。もう一度お試しください。',
+      rateLimitError: 'AI利用上限に達しました。しばらくしてからもう一度お試しください。',
+      timeoutError: 'AIの応答に時間がかかりすぎました。もう一度お試しください。',
+      serviceBusyError: 'AIサーバーが一時的に混雑しています。しばらくしてからもう一度お試しください。',
+      networkError: 'ネットワーク接続をご確認ください。',
+      btnResetToday: '🗑️ 本日の記録をリセット',
+      btnSnooze: '⏰ 5分延長（1回のみ）',
+      confirmReset: '本日の摂取記録と統計をリセットしますか？この操作は元に戻せません。',
+      offlineLabel: 'オフライン',
+      onlineLabel: 'オンライン',
+      btnLogin: '🔐 ログインして記録を保存',
+      btnLogout: 'ログアウト',
+      guestNote: '現在はゲストモードです。ログインすると機種変更後も記録が保持されます。ログインなしでも引き続きご利用いただけます。',
+      syncingNote: '記録を読み込み中...',
+      loginError: 'ログインに失敗しました。もう一度お試しください。',
+      btnHistory: '📅 過去の記録を見る',
+      historyTitle: '過去の記録',
+      historyEmpty: 'まだ保存された記録がありません。',
+      historyClose: '閉じる',
+      consentTitle: '始める前にご確認ください',
+      consentBody: '本サービスはカメラで飲水の様子を撮影し、AIが判定します。<br><br>・撮影された写真は<b>判定のためだけに1回使用</b>され、<br>&nbsp;&nbsp;判定後は<b>サーバーに保存されず即座に削除</b>されます。<br>・顔認識や本人確認には使用されません。<br>・本サービスは<b>任意</b>であり、いつでも利用を中止できます。',
+      consentCheckbox: '上記内容を確認し、同意します',
+      consentBtn: '確認しました、始める',
+      dontShowAgain: '今後表示しない',
+      flashOn: '⚡ 画面フラッシュ：オン',
+      flashOff: '⚡ 画面フラッシュ：オフ',
+      helpBtnLabel: 'ヘルプと設定',
+      helpTabFaq: '❓ よくある質問',
+      helpTabSettings: '⚙️ 設定',
+      faqQ1: 'アラーム音が鳴りません',
+      faqA1: 'iPhone側面の<b>サイレントスイッチ</b>（オレンジ色が見えるとサイレントモード）がオンだと音が鳴りません。サイレントモードをオフにしてください。サイレントモードでも<b>振動は正常に動作</b>します（iOS Safariでは振動機能自体が非対応です）。',
+      faqQ2: 'AI判定が失敗し続けます',
+      faqA2: '暗い場所では画面フラッシュを試してください。それでも失敗する場合は「再撮影する」をお試しください。サーバーが一時的に混雑している可能性もあるので、少し待ってから再度お試しください。',
+      faqQ3: 'カメラが起動しません',
+      faqA3: 'ブラウザ設定でカメラの権限が許可されているか確認してください。それでも解決しない場合はページを更新してみてください。',
+      faqQ4: '5分延長（スヌーズ）ボタンが表示されません',
+      faqA4: 'スヌーズはアラーム1回につき1度しか使えません。すでに使用した場合、次に鳴った時は実際に水を飲まないとアラームが止まりません。',
+      faqQ5: '記録が消えてしまいました',
+      faqA5: 'ログインしない場合、記録はこのブラウザにのみ保存されます。ブラウザを削除したり機種変更すると消える可能性があります。Googleでログインすると記録がクラウドに保存され保持されます。',
+      settingsVibrationLabel: '振動',
+      vibrationOn: 'オン',
+      vibrationOff: 'オフ',
+      settingsSoundLabel: 'アラーム音',
+      sound_siren: 'サイレン（デフォルト）',
+      sound_bell: '柔らかいベル音',
+      sound_digital: 'デジタルビープ',
+      settingsCameraLabel: 'カメラ',
+      cameraFront: '前面',
+      cameraBack: '背面',
+      settingsDayStartLabel: '1日の開始時刻（交代勤務用）',
+      dayStartHint: '設定した時刻より前は「前日」として扱われます。例：6に設定すると午前6時が1日の始まりになります。デフォルトは0時（深夜）です。',
+    },
+    zh: {
+      tag: 'HYDRA-01 · 洁净室水分管理',
+      title: '饮水提醒管理',
+      statusAlarm: '需要确认饮水',
+      statusOn: '运行中',
+      statusOff: '待机中',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`还剩 ${m} 分钟`,
+      ringIdleSub: (m)=>`周期 ${m} 分钟`,
+      btnStart: '开始计时',
+      btnStop: '停止计时',
+      btnOpenCam: '📷 拍摄饮水视频',
+      todayIntakeTitle: '今日饮水情况',
+      emptyLog: '暂无记录',
+      settingsTitle: '设置',
+      labelGoal: '目标(ml/天)',
+      labelWindow: '工作时长(小时)',
+      labelDrink: '单次饮水量(ml)',
+      derived: (min, ml, count)=>`大约每 ${min} 分钟饮水 ${ml}ml，全天共 ${count} 次`,
+      footnote: '以成人每日推荐饮水量2.5L为基准，考虑到穿防尘服的洁净室员工出汗量相当于1小时有氧运动，将标准上调至3.5L。<br>拍摄的视频仅使用1帧画面用于AI判断，不会保存在服务器中。',
+      modalTitle: '饮水认证拍摄',
+      modalDesc: '请将镜头对准自己，清晰拍摄饮水的样子。',
+      verdictPending: 'AI 判断中...',
+      verdictYes: (r)=>`✔ 已确认饮水${r?' · '+r:''}。计时器将重新开始。`,
+      verdictNo: (r)=>`✘ 未能确认${r?' · '+r:''}。请重新拍摄。`,
+      btnCancel: '取消',
+      btnCapture: '拍摄并判断',
+      camDenied: '无法访问摄像头，请在浏览器设置中允许摄像头权限。',
+      camNotReady: '摄像头尚未准备就绪。',
+      genericError: '错误：',
+      btnTest: '⚡ 立即测试闹钟（评审专用）',
+      btnRetry: '🔄 重新拍摄',
+      statsTitle: '饮水认证统计',
+      statsAttempts: '总次数',
+      statsSuccess: '成功',
+      statsFail: '失败',
+      statsRate: '成功率',
+      statsAvgInterval: '平均间隔',
+      statsNoData: '暂无数据',
+      minUnit: '分钟',
+      judgeBanner: '👆 点击下方"立即测试闹钟"按钮，无需等待即可体验',
+      friendlyError: '发生临时错误，请重试。',
+      rateLimitError: 'AI 使用额度已用完，请稍后重试。',
+      timeoutError: 'AI 响应超时，请稍后重试。',
+      serviceBusyError: 'AI 服务器暂时繁忙，请稍后重试。',
+      networkError: '请检查网络连接。',
+      btnResetToday: '🗑️ 重置今日记录',
+      btnSnooze: '⏰ 延迟5分钟（每次仅限1次）',
+      confirmReset: '确定要重置今天的饮水记录和统计吗？此操作无法撤销。',
+      offlineLabel: '离线',
+      onlineLabel: '在线',
+      btnLogin: '🔐 登录并保存记录',
+      btnLogout: '退出登录',
+      guestNote: '当前为访客模式。登录后即使更换设备，记录也会保留。无需登录也可继续使用。',
+      syncingNote: '正在加载记录...',
+      loginError: '登录失败，请重试。',
+      btnHistory: '📅 查看历史记录',
+      historyTitle: '历史记录',
+      historyEmpty: '暂无保存的记录。',
+      historyClose: '关闭',
+      consentTitle: '开始前请确认',
+      consentBody: '本服务将通过摄像头拍摄您的饮水画面并由AI进行判断。<br><br>· 拍摄的照片仅<b>用于判断目的使用一次</b>，<br>&nbsp;&nbsp;判断完成后将<b>立即销毁，不会保存在服务器</b>。<br>· 不用于人脸识别或身份验证。<br>· 本服务为<b>可选项目</b>，您可以随时停止使用。',
+      consentCheckbox: '我已阅读并同意以上内容',
+      consentBtn: '我已了解，开始使用',
+      dontShowAgain: '不再显示',
+      flashOn: '⚡ 屏幕闪光灯：开',
+      flashOff: '⚡ 屏幕闪光灯：关',
+      helpBtnLabel: '帮助与设置',
+      helpTabFaq: '❓ 常见问题',
+      helpTabSettings: '⚙️ 设置',
+      faqQ1: '闹钟没有声音',
+      faqA1: '如果iPhone侧面的<b>静音开关</b>（显示橙色即为静音模式）已打开，则不会发出声音。请关闭静音模式。静音模式下<b>震动仍可正常工作</b>（但震动功能在iOS Safari上不受支持）。',
+      faqQ2: 'AI 判断持续失败',
+      faqA2: '如果光线较暗，请尝试打开屏幕闪光灯。如果仍然失败，请点击"重新拍摄"，服务器可能暂时繁忙，请稍后再试。',
+      faqQ3: '摄像头无法开启',
+      faqA3: '请检查浏览器设置中是否已允许摄像头权限。如果重试后仍无法使用，请尝试刷新页面。',
+      faqQ4: '看不到延迟5分钟（贪睡）按钮',
+      faqA4: '贪睡功能每次闹钟仅可使用一次。如果已经使用过一次，下次响铃时必须实际饮水才能关闭闹钟。',
+      faqQ5: '记录消失了',
+      faqA5: '如果不登录，记录仅保存在此浏览器中。清除浏览器数据或更换设备可能导致记录丢失。登录Google账号后，记录将保存在云端并保留。',
+      settingsVibrationLabel: '震动',
+      vibrationOn: '开启',
+      vibrationOff: '关闭',
+      settingsSoundLabel: '选择闹钟铃声',
+      sound_siren: '警报声（默认）',
+      sound_bell: '柔和铃声',
+      sound_digital: '数字提示音',
+      settingsCameraLabel: '摄像头方向',
+      cameraFront: '前置',
+      cameraBack: '后置',
+      settingsDayStartLabel: '一天的开始时间（适用于轮班）',
+      dayStartHint: '设定时间之前将计入"前一天"。例如设为6，则凌晨6点为一天的开始。默认值为0点（午夜）。',
+    },
+    vi: {
+      tag: 'HYDRA-01 · Quản lý nước phòng sạch',
+      title: 'Quản lý uống nước',
+      statusAlarm: 'Cần xác nhận uống nước',
+      statusOn: 'Đang chạy',
+      statusOff: 'Chờ',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`Còn ${m} phút`,
+      ringIdleSub: (m)=>`Chu kỳ ${m} phút`,
+      btnStart: 'Bắt đầu hẹn giờ',
+      btnStop: 'Dừng hẹn giờ',
+      btnOpenCam: '📷 Quay video uống nước',
+      todayIntakeTitle: 'Tình trạng uống nước hôm nay',
+      emptyLog: 'Chưa có dữ liệu',
+      settingsTitle: 'Cài đặt',
+      labelGoal: 'Mục tiêu (ml/ngày)',
+      labelWindow: 'Giờ làm việc (giờ)',
+      labelDrink: 'Lượng uống mỗi lần (ml)',
+      derived: (min, ml, count)=>`Khoảng ${min} phút uống ${ml}ml, tổng cộng ${count} lần mỗi ngày`,
+      footnote: 'Dựa trên lượng nước khuyến nghị 2.5L/ngày cho người lớn, đã tăng lên 3.5L vì công nhân mặc đồ bảo hộ trong phòng sạch có mức độ đổ mồ hôi tương đương 1 giờ vận động.<br>Chỉ 1 khung hình từ video được dùng để AI phân tích và không được lưu trên máy chủ.',
+      modalTitle: 'Chụp ảnh xác nhận uống nước',
+      modalDesc: 'Vui lòng hướng camera để thấy rõ cảnh bạn đang uống nước.',
+      verdictPending: 'AI đang phân tích...',
+      verdictYes: (r)=>`✔ Đã xác nhận uống nước${r?' · '+r:''}. Hẹn giờ sẽ bắt đầu lại.`,
+      verdictNo: (r)=>`✘ Chưa xác nhận được${r?' · '+r:''}. Vui lòng chụp lại.`,
+      btnCancel: 'Hủy',
+      btnCapture: 'Chụp và phân tích',
+      camDenied: 'Không thể truy cập camera. Vui lòng cho phép quyền camera trong cài đặt trình duyệt.',
+      camNotReady: 'Camera chưa sẵn sàng.',
+      genericError: 'Lỗi: ',
+      btnTest: '⚡ Kiểm tra báo thức ngay (dành cho giám khảo)',
+      btnRetry: '🔄 Chụp lại',
+      statsTitle: 'Thống kê xác nhận uống nước',
+      statsAttempts: 'Tổng số lần',
+      statsSuccess: 'Thành công',
+      statsFail: 'Thất bại',
+      statsRate: 'Tỷ lệ thành công',
+      statsAvgInterval: 'Khoảng cách trung bình',
+      statsNoData: 'Chưa có dữ liệu',
+      minUnit: 'phút',
+      judgeBanner: '👆 Nhấn nút "Kiểm tra báo thức ngay" bên dưới để trải nghiệm ngay không cần chờ',
+      friendlyError: 'Đã xảy ra lỗi tạm thời. Vui lòng thử lại.',
+      rateLimitError: 'Đã hết hạn mức sử dụng AI. Vui lòng thử lại sau.',
+      timeoutError: 'Phản hồi AI bị quá thời gian. Vui lòng thử lại sau.',
+      serviceBusyError: 'Máy chủ AI đang tạm thời quá tải. Vui lòng thử lại sau.',
+      networkError: 'Vui lòng kiểm tra kết nối mạng.',
+      btnResetToday: '🗑️ Đặt lại dữ liệu hôm nay',
+      btnSnooze: '⏰ Hoãn 5 phút (chỉ 1 lần)',
+      confirmReset: 'Bạn có muốn đặt lại dữ liệu và thống kê uống nước hôm nay không? Thao tác này không thể hoàn tác.',
+      offlineLabel: 'Ngoại tuyến',
+      onlineLabel: 'Trực tuyến',
+      btnLogin: '🔐 Đăng nhập để lưu dữ liệu',
+      btnLogout: 'Đăng xuất',
+      guestNote: 'Bạn đang ở chế độ khách. Đăng nhập để giữ dữ liệu khi đổi thiết bị. Bạn vẫn có thể tiếp tục sử dụng mà không cần đăng nhập.',
+      syncingNote: 'Đang tải dữ liệu...',
+      loginError: 'Đăng nhập thất bại. Vui lòng thử lại.',
+      btnHistory: '📅 Xem lịch sử',
+      historyTitle: 'Lịch sử',
+      historyEmpty: 'Chưa có dữ liệu được lưu.',
+      historyClose: 'Đóng',
+      consentTitle: 'Vui lòng xác nhận trước khi bắt đầu',
+      consentBody: 'Dịch vụ này sử dụng camera để quay cảnh bạn uống nước và AI sẽ phân tích.<br><br>· Ảnh chụp <b>chỉ được sử dụng một lần cho mục đích xác minh</b>,<br>&nbsp;&nbsp;và sẽ <b>bị xóa ngay sau khi phân tích, không lưu trên máy chủ</b>.<br>· Không sử dụng để nhận diện khuôn mặt hay xác minh danh tính.<br>· Dịch vụ này là <b>tùy chọn</b>, bạn có thể ngừng sử dụng bất cứ lúc nào.',
+      consentCheckbox: 'Tôi đã đọc và đồng ý với nội dung trên',
+      consentBtn: 'Đã hiểu, bắt đầu',
+      dontShowAgain: 'Không hiển thị lại',
+      flashOn: '⚡ Đèn flash màn hình: Bật',
+      flashOff: '⚡ Đèn flash màn hình: Tắt',
+      helpBtnLabel: 'Trợ giúp & Cài đặt',
+      helpTabFaq: '❓ Câu hỏi thường gặp',
+      helpTabSettings: '⚙️ Cài đặt',
+      faqQ1: 'Báo thức không có âm thanh',
+      faqA1: 'Nếu <b>công tắc im lặng</b> ở cạnh iPhone đang bật (hiện màu cam), âm thanh sẽ bị chặn. Vui lòng tắt chế độ im lặng. <b>Rung vẫn hoạt động</b> ở chế độ im lặng (lưu ý: chức năng rung không được hỗ trợ trên iOS Safari).',
+      faqQ2: 'AI liên tục xác nhận thất bại',
+      faqA2: 'Nếu ánh sáng yếu, hãy thử bật đèn flash màn hình. Nếu vẫn thất bại, nhấn "Chụp lại" — máy chủ có thể đang tạm thời quá tải, vui lòng thử lại sau.',
+      faqQ3: 'Camera không bật được',
+      faqA3: 'Vui lòng kiểm tra xem quyền camera đã được cho phép trong cài đặt trình duyệt chưa. Nếu vẫn không được, hãy thử tải lại trang.',
+      faqQ4: 'Không thấy nút hoãn 5 phút (snooze)',
+      faqA4: 'Chức năng hoãn chỉ có thể dùng một lần cho mỗi lần báo thức. Nếu đã dùng một lần, lần reo tiếp theo bạn phải thực sự uống nước để tắt báo thức.',
+      faqQ5: 'Dữ liệu của tôi bị mất',
+      faqA5: 'Nếu không đăng nhập, dữ liệu chỉ được lưu trên trình duyệt này và có thể mất nếu xóa dữ liệu trình duyệt hoặc đổi thiết bị. Đăng nhập bằng Google để lưu dữ liệu trên đám mây.',
+      settingsVibrationLabel: 'Rung',
+      vibrationOn: 'Bật',
+      vibrationOff: 'Tắt',
+      settingsSoundLabel: 'Chọn âm báo thức',
+      sound_siren: 'Còi báo (mặc định)',
+      sound_bell: 'Chuông nhẹ nhàng',
+      sound_digital: 'Tiếng bíp kỹ thuật số',
+      settingsCameraLabel: 'Hướng camera',
+      cameraFront: 'Trước',
+      cameraBack: 'Sau',
+      settingsDayStartLabel: 'Giờ bắt đầu ngày (dành cho ca kíp)',
+      dayStartHint: 'Thời gian trước giờ đã đặt sẽ được tính là "hôm qua". Ví dụ: đặt 6 nghĩa là 6 giờ sáng là bắt đầu một ngày mới. Mặc định là 0 giờ (nửa đêm).',
+    },
+    th: {
+      tag: 'HYDRA-01 · ระบบจัดการน้ำในห้องคลีนรูม',
+      title: 'ระบบแจ้งเตือนดื่มน้ำ',
+      statusAlarm: 'ต้องยืนยันการดื่มน้ำ',
+      statusOn: 'กำลังทำงาน',
+      statusOff: 'สแตนด์บาย',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`อีก ${m} นาที`,
+      ringIdleSub: (m)=>`รอบ ${m} นาที`,
+      btnStart: 'เริ่มจับเวลา',
+      btnStop: 'หยุดจับเวลา',
+      btnOpenCam: '📷 ถ่ายวิดีโอขณะดื่มน้ำ',
+      todayIntakeTitle: 'สถานะการดื่มน้ำวันนี้',
+      emptyLog: 'ยังไม่มีข้อมูล',
+      settingsTitle: 'ตั้งค่า',
+      labelGoal: 'เป้าหมาย (มล./วัน)',
+      labelWindow: 'ชั่วโมงทำงาน (ชม.)',
+      labelDrink: 'ปริมาณต่อครั้ง (มล.)',
+      derived: (min, ml, count)=>`ประมาณทุก ${min} นาที ดื่ม ${ml} มล. รวมวันละ ${count} ครั้ง`,
+      footnote: 'อ้างอิงปริมาณน้ำที่แนะนำต่อวันสำหรับผู้ใหญ่ 2.5 ลิตร และปรับเพิ่มเป็น 3.5 ลิตร เนื่องจากพนักงานที่สวมชุดป้องกันในห้องคลีนรูมมีเหงื่อออกเทียบเท่าการออกกำลังกาย 1 ชั่วโมง<br>ใช้เพียง 1 เฟรมจากวิดีโอเพื่อการวิเคราะห์ด้วย AI เท่านั้น และจะไม่ถูกบันทึกไว้บนเซิร์ฟเวอร์',
+      modalTitle: 'ถ่ายภาพยืนยันการดื่มน้ำ',
+      modalDesc: 'กรุณาหันกล้องให้เห็นภาพการดื่มน้ำของคุณอย่างชัดเจน',
+      verdictPending: 'AI กำลังวิเคราะห์...',
+      verdictYes: (r)=>`✔ ยืนยันการดื่มน้ำแล้ว${r?' · '+r:''} ตัวจับเวลาจะเริ่มใหม่`,
+      verdictNo: (r)=>`✘ ไม่สามารถยืนยันได้${r?' · '+r:''} กรุณาถ่ายใหม่อีกครั้ง`,
+      btnCancel: 'ยกเลิก',
+      btnCapture: 'ถ่ายภาพและวิเคราะห์',
+      camDenied: 'ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตสิทธิ์การใช้กล้องในการตั้งค่าเบราว์เซอร์',
+      camNotReady: 'กล้องยังไม่พร้อมใช้งาน',
+      genericError: 'ข้อผิดพลาด: ',
+      btnTest: '⚡ ทดสอบเสียงปลุกทันที (สำหรับกรรมการ)',
+      btnRetry: '🔄 ถ่ายใหม่อีกครั้ง',
+      statsTitle: 'สถิติการยืนยันการดื่มน้ำ',
+      statsAttempts: 'จำนวนครั้งทั้งหมด',
+      statsSuccess: 'สำเร็จ',
+      statsFail: 'ล้มเหลว',
+      statsRate: 'อัตราความสำเร็จ',
+      statsAvgInterval: 'ช่วงเวลาเฉลี่ย',
+      statsNoData: 'ยังไม่มีข้อมูล',
+      minUnit: 'นาที',
+      judgeBanner: '👆 กดปุ่ม "ทดสอบเสียงปลุกทันที" ด้านล่างเพื่อทดลองใช้งานได้ทันทีโดยไม่ต้องรอ',
+      friendlyError: 'เกิดข้อผิดพลาดชั่วคราว กรุณาลองใหม่อีกครั้ง',
+      rateLimitError: 'ใช้โควต้า AI ครบแล้ว กรุณาลองใหม่ภายหลัง',
+      timeoutError: 'AI ตอบสนองล่าช้าเกินไป กรุณาลองใหม่ภายหลัง',
+      serviceBusyError: 'เซิร์ฟเวอร์ AI กำลังมีผู้ใช้งานหนาแน่นชั่วคราว กรุณาลองใหม่ภายหลัง',
+      networkError: 'กรุณาตรวจสอบการเชื่อมต่อเครือข่าย',
+      btnResetToday: '🗑️ รีเซ็ตข้อมูลวันนี้',
+      btnSnooze: '⏰ เลื่อนเวลา 5 นาที (ใช้ได้ครั้งเดียว)',
+      confirmReset: 'ต้องการรีเซ็ตข้อมูลและสถิติการดื่มน้ำวันนี้หรือไม่ การกระทำนี้ไม่สามารถย้อนกลับได้',
+      offlineLabel: 'ออฟไลน์',
+      onlineLabel: 'ออนไลน์',
+      btnLogin: '🔐 เข้าสู่ระบบเพื่อบันทึกข้อมูล',
+      btnLogout: 'ออกจากระบบ',
+      guestNote: 'ขณะนี้คุณอยู่ในโหมดผู้เยี่ยมชม เข้าสู่ระบบเพื่อรักษาข้อมูลไว้แม้เปลี่ยนอุปกรณ์ คุณยังใช้งานต่อได้แม้ไม่เข้าสู่ระบบ',
+      syncingNote: 'กำลังโหลดข้อมูล...',
+      loginError: 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+      btnHistory: '📅 ดูประวัติย้อนหลัง',
+      historyTitle: 'ประวัติย้อนหลัง',
+      historyEmpty: 'ยังไม่มีข้อมูลที่บันทึกไว้',
+      historyClose: 'ปิด',
+      consentTitle: 'กรุณายืนยันก่อนเริ่มใช้งาน',
+      consentBody: 'บริการนี้ใช้กล้องถ่ายภาพขณะดื่มน้ำและวิเคราะห์ด้วย AI<br><br>· ภาพที่ถ่าย <b>ใช้เพียงครั้งเดียวเพื่อการวิเคราะห์</b> เท่านั้น<br>&nbsp;&nbsp;และจะ<b>ถูกลบทันทีหลังวิเคราะห์ ไม่มีการบันทึกไว้บนเซิร์ฟเวอร์</b><br>· ไม่ใช้เพื่อการจดจำใบหน้าหรือยืนยันตัวตน<br>· บริการนี้เป็น<b>ทางเลือก</b> คุณสามารถหยุดใช้งานได้ทุกเมื่อ',
+      consentCheckbox: 'ฉันได้อ่านและยอมรับเงื่อนไขข้างต้นแล้ว',
+      consentBtn: 'เข้าใจแล้ว เริ่มใช้งาน',
+      dontShowAgain: 'ไม่ต้องแสดงอีก',
+      flashOn: '⚡ แฟลชหน้าจอ: เปิด',
+      flashOff: '⚡ แฟลชหน้าจอ: ปิด',
+      helpBtnLabel: 'ช่วยเหลือและตั้งค่า',
+      helpTabFaq: '❓ คำถามที่พบบ่อย',
+      helpTabSettings: '⚙️ ตั้งค่า',
+      faqQ1: 'เสียงปลุกไม่ดัง',
+      faqA1: 'หากสวิตช์<b>ปิดเสียง</b>ด้านข้าง iPhone เปิดอยู่ (เห็นสีส้ม) เสียงจะไม่ดัง กรุณาปิดโหมดปิดเสียง <b>การสั่นยังทำงานปกติ</b>ในโหมดปิดเสียง (แต่ฟังก์ชันสั่นไม่รองรับบน iOS Safari)',
+      faqQ2: 'AI วิเคราะห์ไม่ผ่านซ้ำๆ',
+      faqA2: 'หากแสงน้อย ลองเปิดแฟลชหน้าจอ หากยังไม่สำเร็จ กด "ถ่ายใหม่อีกครั้ง" เซิร์ฟเวอร์อาจกำลังมีผู้ใช้งานหนาแน่นชั่วคราว กรุณาลองใหม่ภายหลัง',
+      faqQ3: 'กล้องเปิดไม่ได้',
+      faqA3: 'กรุณาตรวจสอบว่าอนุญาตสิทธิ์กล้องในการตั้งค่าเบราว์เซอร์แล้วหรือไม่ หากลองใหม่แล้วยังไม่ได้ ลองรีเฟรชหน้าเว็บ',
+      faqQ4: 'ไม่เห็นปุ่มเลื่อนเวลา 5 นาที (Snooze)',
+      faqA4: 'ฟังก์ชันเลื่อนเวลาใช้ได้เพียงครั้งเดียวต่อการปลุกหนึ่งครั้ง หากใช้ไปแล้วหนึ่งครั้ง เมื่อเสียงปลุกดังอีกครั้งต้องดื่มน้ำจริงเพื่อปิดเสียงปลุก',
+      faqQ5: 'ข้อมูลของฉันหายไป',
+      faqA5: 'หากไม่เข้าสู่ระบบ ข้อมูลจะถูกบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น และอาจหายไปหากลบข้อมูลเบราว์เซอร์หรือเปลี่ยนอุปกรณ์ เข้าสู่ระบบด้วย Google เพื่อบันทึกข้อมูลไว้บนคลาวด์',
+      settingsVibrationLabel: 'การสั่น',
+      vibrationOn: 'เปิด',
+      vibrationOff: 'ปิด',
+      settingsSoundLabel: 'เลือกเสียงปลุก',
+      sound_siren: 'ไซเรน (ค่าเริ่มต้น)',
+      sound_bell: 'เสียงระฆังนุ่มนวล',
+      sound_digital: 'เสียงบี๊บดิจิทัล',
+      settingsCameraLabel: 'ทิศทางกล้อง',
+      cameraFront: 'กล้องหน้า',
+      cameraBack: 'กล้องหลัง',
+      settingsDayStartLabel: 'เวลาเริ่มต้นวัน (สำหรับงานกะ)',
+      dayStartHint: 'เวลาก่อนที่ตั้งไว้จะถูกนับเป็น "เมื่อวาน" เช่น ตั้งเป็น 6 หมายถึงวันใหม่เริ่มตอนตี 6 ค่าเริ่มต้นคือเที่ยงคืน (0 น.)',
+    },
+    id: {
+      tag: 'HYDRA-01 · Manajemen Hidrasi Ruang Bersih',
+      title: 'Manajemen Minum Air',
+      statusAlarm: 'Perlu Verifikasi Minum',
+      statusOn: 'Berjalan',
+      statusOff: 'Siaga',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`${m} menit lagi`,
+      ringIdleSub: (m)=>`Siklus ${m} menit`,
+      btnStart: 'Mulai Timer',
+      btnStop: 'Hentikan Timer',
+      btnOpenCam: '📷 Rekam Video Minum Air',
+      todayIntakeTitle: 'Status Minum Hari Ini',
+      emptyLog: 'Belum ada data',
+      settingsTitle: 'Pengaturan',
+      labelGoal: 'Target (ml/hari)',
+      labelWindow: 'Jam Kerja (jam)',
+      labelDrink: 'Jumlah per Minum (ml)',
+      derived: (min, ml, count)=>`Sekitar setiap ${min} menit minum ${ml}ml, total ${count} kali sehari`,
+      footnote: 'Berdasarkan asupan air harian yang disarankan untuk orang dewasa 2,5L, dinaikkan menjadi 3,5L karena pekerja ruang bersih yang mengenakan pakaian pelindung diasumsikan berkeringat setara dengan olahraga aerobik 1 jam.<br>Hanya 1 frame dari video yang digunakan untuk analisis AI dan tidak disimpan di server.',
+      modalTitle: 'Foto Verifikasi Minum Air',
+      modalDesc: 'Arahkan kamera agar terlihat jelas Anda sedang minum air.',
+      verdictPending: 'AI sedang menganalisis...',
+      verdictYes: (r)=>`✔ Terverifikasi minum air${r?' · '+r:''}. Timer akan dimulai ulang.`,
+      verdictNo: (r)=>`✘ Belum terverifikasi${r?' · '+r:''}. Silakan foto ulang.`,
+      btnCancel: 'Batal',
+      btnCapture: 'Foto & Analisis',
+      camDenied: 'Gagal mengakses kamera. Mohon izinkan akses kamera di pengaturan browser.',
+      camNotReady: 'Kamera belum siap.',
+      genericError: 'Kesalahan: ',
+      btnTest: '⚡ Uji Alarm Sekarang (untuk Juri)',
+      btnRetry: '🔄 Foto Ulang',
+      statsTitle: 'Statistik Verifikasi Minum',
+      statsAttempts: 'Total Percobaan',
+      statsSuccess: 'Berhasil',
+      statsFail: 'Gagal',
+      statsRate: 'Tingkat Keberhasilan',
+      statsAvgInterval: 'Interval Rata-rata',
+      statsNoData: 'Belum ada data',
+      minUnit: 'menit',
+      judgeBanner: '👆 Tekan tombol "Uji Alarm Sekarang" di bawah untuk mencoba langsung tanpa menunggu',
+      friendlyError: 'Terjadi kesalahan sementara. Silakan coba lagi.',
+      rateLimitError: 'Kuota penggunaan AI telah habis. Silakan coba lagi nanti.',
+      timeoutError: 'Respons AI melebihi batas waktu. Silakan coba lagi nanti.',
+      serviceBusyError: 'Server AI sedang sibuk sementara. Silakan coba lagi nanti.',
+      networkError: 'Mohon periksa koneksi jaringan Anda.',
+      btnResetToday: '🗑️ Reset Data Hari Ini',
+      btnSnooze: '⏰ Tunda 5 Menit (hanya 1 kali)',
+      confirmReset: 'Reset catatan dan statistik minum air hari ini? Tindakan ini tidak dapat dibatalkan.',
+      offlineLabel: 'Offline',
+      onlineLabel: 'Online',
+      btnLogin: '🔐 Masuk untuk Menyimpan Data',
+      btnLogout: 'Keluar',
+      guestNote: 'Anda sedang dalam mode tamu. Masuk untuk menyimpan data meski ganti perangkat. Anda tetap bisa menggunakan tanpa masuk.',
+      syncingNote: 'Memuat data...',
+      loginError: 'Gagal masuk. Silakan coba lagi.',
+      btnHistory: '📅 Lihat Riwayat',
+      historyTitle: 'Riwayat',
+      historyEmpty: 'Belum ada data tersimpan.',
+      historyClose: 'Tutup',
+      consentTitle: 'Mohon konfirmasi sebelum memulai',
+      consentBody: 'Layanan ini menggunakan kamera untuk memotret Anda saat minum air dan dianalisis oleh AI.<br><br>· Foto yang diambil <b>hanya digunakan sekali untuk tujuan verifikasi</b>,<br>&nbsp;&nbsp;dan akan <b>langsung dihapus setelah verifikasi, tidak disimpan di server</b>.<br>· Tidak digunakan untuk pengenalan wajah atau verifikasi identitas.<br>· Layanan ini bersifat <b>opsional</b>, Anda dapat berhenti menggunakan kapan saja.',
+      consentCheckbox: 'Saya telah membaca dan menyetujui hal di atas',
+      consentBtn: 'Mengerti, mulai',
+      dontShowAgain: 'Jangan tampilkan lagi',
+      flashOn: '⚡ Lampu Kilat Layar: Aktif',
+      flashOff: '⚡ Lampu Kilat Layar: Nonaktif',
+      helpBtnLabel: 'Bantuan & Pengaturan',
+      helpTabFaq: '❓ Pertanyaan Umum',
+      helpTabSettings: '⚙️ Pengaturan',
+      faqQ1: 'Alarm tidak berbunyi',
+      faqA1: 'Jika <b>sakelar senyap</b> di samping iPhone aktif (terlihat warna oranye), suara akan diblokir. Mohon matikan mode senyap. <b>Getaran tetap berfungsi normal</b> dalam mode senyap (namun fitur getar tidak didukung di iOS Safari).',
+      faqQ2: 'Verifikasi AI terus gagal',
+      faqA2: 'Jika pencahayaan kurang, coba nyalakan lampu kilat layar. Jika masih gagal, tekan "Foto Ulang" — server mungkin sedang sibuk sementara, coba lagi nanti.',
+      faqQ3: 'Kamera tidak menyala',
+      faqA3: 'Mohon periksa apakah izin kamera sudah diaktifkan di pengaturan browser. Jika masih tidak berhasil setelah mencoba lagi, coba muat ulang halaman.',
+      faqQ4: 'Tombol tunda 5 menit (snooze) tidak terlihat',
+      faqA4: 'Fitur tunda hanya bisa digunakan sekali per alarm. Jika sudah digunakan sekali, saat berbunyi lagi Anda harus benar-benar minum air untuk mematikan alarm.',
+      faqQ5: 'Data saya hilang',
+      faqA5: 'Jika tidak masuk (login), data hanya disimpan di browser ini dan bisa hilang jika data browser dihapus atau perangkat diganti. Masuk dengan Google agar data tersimpan di cloud.',
+      settingsVibrationLabel: 'Getaran',
+      vibrationOn: 'Aktif',
+      vibrationOff: 'Nonaktif',
+      settingsSoundLabel: 'Pilih Suara Alarm',
+      sound_siren: 'Sirene (default)',
+      sound_bell: 'Bel Lembut',
+      sound_digital: 'Bip Digital',
+      settingsCameraLabel: 'Arah Kamera',
+      cameraFront: 'Depan',
+      cameraBack: 'Belakang',
+      settingsDayStartLabel: 'Waktu Mulai Hari (untuk kerja shift)',
+      dayStartHint: 'Waktu sebelum jam yang ditentukan akan dihitung sebagai "kemarin". Misal: atur ke 6 berarti jam 6 pagi adalah awal hari. Default adalah jam 0 (tengah malam).',
+    },
+    tl: {
+      tag: 'HYDRA-01 · Pamamahala ng Tubig sa Clean Room',
+      title: 'Pamamahala ng Pag-inom ng Tubig',
+      statusAlarm: 'Kailangan ng Kumpirmasyon sa Pag-inom',
+      statusOn: 'Tumatakbo',
+      statusOff: 'Naghihintay',
+      ringAlarmSub: 'DRINK & VERIFY',
+      ringRunningSub: (m)=>`${m} minuto na lang`,
+      ringIdleSub: (m)=>`Cycle ${m} minuto`,
+      btnStart: 'Simulan ang Timer',
+      btnStop: 'Ihinto ang Timer',
+      btnOpenCam: '📷 Kumuha ng Video ng Pag-inom',
+      todayIntakeTitle: 'Kalagayan ng Pag-inom Ngayon',
+      emptyLog: 'Wala pang record',
+      settingsTitle: 'Mga Setting',
+      labelGoal: 'Target (ml/araw)',
+      labelWindow: 'Oras ng Trabaho (oras)',
+      labelDrink: 'Dami bawat inom (ml)',
+      derived: (min, ml, count)=>`Humigit-kumulang bawat ${min} minuto, ${ml}ml, kabuuang ${count} beses sa isang araw`,
+      footnote: 'Batay sa inirerekomendang 2.5L na tubig kada araw para sa mga adulto, itinaas sa 3.5L dahil ang mga manggagawa sa clean room na naka-protective suit ay ipinapalagay na nagpapawis nang katumbas ng 1 oras na aerobic exercise.<br>Isang frame lamang mula sa video ang ginagamit para sa AI analysis at hindi ito nase-save sa server.',
+      modalTitle: 'Kuhanan ng Larawan sa Pag-inom',
+      modalDesc: 'Paki-harap ang camera para malinaw na makita ang pag-inom mo ng tubig.',
+      verdictPending: 'Sinusuri ng AI...',
+      verdictYes: (r)=>`✔ Nakumpirma ang pag-inom${r?' · '+r:''}. Magsisimula ulit ang timer.`,
+      verdictNo: (r)=>`✘ Hindi nakumpirma${r?' · '+r:''}. Paki-ulit ang pagkuha ng larawan.`,
+      btnCancel: 'Kanselahin',
+      btnCapture: 'Kunan at Suriin',
+      camDenied: 'Hindi ma-access ang camera. Paki-allow ang camera permission sa settings ng browser.',
+      camNotReady: 'Hindi pa handa ang camera.',
+      genericError: 'Error: ',
+      btnTest: '⚡ I-test Ngayon ang Alarm (para sa Hurado)',
+      btnRetry: '🔄 Kunan Muli',
+      statsTitle: 'Istatistika ng Pagpapatunay ng Pag-inom',
+      statsAttempts: 'Kabuuang Pagsubok',
+      statsSuccess: 'Tagumpay',
+      statsFail: 'Bigo',
+      statsRate: 'Success Rate',
+      statsAvgInterval: 'Average na Agwat',
+      statsNoData: 'Wala pang data',
+      minUnit: 'minuto',
+      judgeBanner: '👆 Pindutin ang "I-test Ngayon ang Alarm" sa baba para agad masubukan nang walang paghihintay',
+      friendlyError: 'Nagkaroon ng pansamantalang error. Pakisubukan muli.',
+      rateLimitError: 'Naubos na ang AI usage limit. Pakisubukan muli mamaya.',
+      timeoutError: 'Sobra sa oras ang response ng AI. Pakisubukan muli mamaya.',
+      serviceBusyError: 'Pansamantalang busy ang AI server. Pakisubukan muli mamaya.',
+      networkError: 'Paki-check ang inyong network connection.',
+      btnResetToday: '🗑️ I-reset ang Record Ngayon',
+      btnSnooze: '⏰ Ipagpaliban ng 5 Minuto (1 beses lang)',
+      confirmReset: 'I-reset ba ang record at istatistika ng pag-inom ngayong araw? Hindi na maibabalik ang aksyong ito.',
+      offlineLabel: 'Offline',
+      onlineLabel: 'Online',
+      btnLogin: '🔐 Mag-login para I-save ang Record',
+      btnLogout: 'Mag-logout',
+      guestNote: 'Nasa guest mode ka ngayon. Mag-login para mapanatili ang record kahit magpalit ng device. Puwede ka pa ring gumamit kahit hindi naka-login.',
+      syncingNote: 'Nilo-load ang record...',
+      loginError: 'Hindi matagumpay ang pag-login. Pakisubukan muli.',
+      btnHistory: '📅 Tingnan ang Kasaysayan',
+      historyTitle: 'Kasaysayan',
+      historyEmpty: 'Wala pang naka-save na record.',
+      historyClose: 'Isara',
+      consentTitle: 'Paki-kumpirma bago magsimula',
+      consentBody: 'Gumagamit ang serbisyong ito ng camera para kunan ka ng litrato habang umiinom ng tubig at ini-analyze ng AI.<br><br>· Ang mga litratong kinuha ay <b>ginagamit lamang minsan para sa layuning pagpapatunay</b>,<br>&nbsp;&nbsp;at <b>agad na binubura pagkatapos i-verify, hindi nase-save sa server</b>.<br>· Hindi ginagamit para sa facial recognition o pagpapatunay ng identidad.<br>· Ang serbisyong ito ay <b>opsyonal</b>, puwede mong itigil ang paggamit anumang oras.',
+      consentCheckbox: 'Nabasa ko at sumasang-ayon ako sa nasa itaas',
+      consentBtn: 'Nauunawaan ko, magsimula',
+      dontShowAgain: 'Huwag nang ipakita ulit',
+      flashOn: '⚡ Screen Flash: Naka-on',
+      flashOff: '⚡ Screen Flash: Naka-off',
+      helpBtnLabel: 'Tulong at Mga Setting',
+      helpTabFaq: '❓ Mga Madalas Itanong',
+      helpTabSettings: '⚙️ Mga Setting',
+      faqQ1: 'Walang tunog ang alarm',
+      faqA1: 'Kung naka-on ang <b>mute switch</b> sa gilid ng iPhone (may makikitang orange), naka-block ang tunog. Paki-off ang mute mode. <b>Gumagana pa rin ang vibration</b> kahit naka-mute (pero hindi supported ang vibration sa iOS Safari).',
+      faqQ2: 'Palaging bigo ang AI verification',
+      faqA2: 'Kung madilim, subukang i-on ang screen flash. Kung bigo pa rin, pindutin ang "Kunan Muli" — maaaring busy ang server pansamantala, subukan muli mamaya.',
+      faqQ3: 'Hindi nagbubukas ang camera',
+      faqA3: 'Paki-check kung naka-allow na ang camera permission sa browser settings. Kung hindi pa rin gumagana pagkatapos mag-retry, subukang i-refresh ang page.',
+      faqQ4: 'Hindi nakikita ang 5-minute snooze button',
+      faqA4: 'Isang beses lang puwedeng gamitin ang snooze bawat alarm. Kung nagamit mo na ito, sa susunod na pagtunog kailangan mo talagang uminom ng tubig para mapatay ang alarm.',
+      faqQ5: 'Nawala ang aking record',
+      faqA5: 'Kung hindi ka naka-login, naka-save lamang ang record sa browser na ito at maaaring mawala kapag na-clear ang browser data o napalitan ng device. Mag-login gamit ang Google para ma-save sa cloud ang record.',
+      settingsVibrationLabel: 'Vibration',
+      vibrationOn: 'Naka-on',
+      vibrationOff: 'Naka-off',
+      settingsSoundLabel: 'Pumili ng Tunog ng Alarm',
+      sound_siren: 'Siren (default)',
+      sound_bell: 'Malambing na Kampana',
+      sound_digital: 'Digital Beep',
+      settingsCameraLabel: 'Direksyon ng Camera',
+      cameraFront: 'Harap',
+      cameraBack: 'Likod',
+      settingsDayStartLabel: 'Oras ng Simula ng Araw (para sa shift work)',
+      dayStartHint: 'Ang mga oras bago ang itinakdang oras ay ituturing na "kahapon". Halimbawa: kung 6 ang itinakda, ang 6 AM ang simula ng bagong araw. Ang default ay 0 (hatinggabi).',
+    },
+  };
+  function t(key, ...args){
+    const entry = I18N[state.lang][key];
+    return typeof entry === 'function' ? entry(...args) : entry;
+  }
+
+  const LANG_NAMES = {
+    ko: '한국어', en: 'English', ja: '日本語',
+    zh: '中文', vi: 'Tiếng Việt', th: 'ภาษาไทย',
+    id: 'Bahasa Indonesia', tl: 'Tagalog',
+  };
+  function renderLangSelect(selectId){
+    const opts = Object.keys(LANG_NAMES).map(code =>
+      `<option value="${code}" ${state.lang===code?'selected':''}>${LANG_NAMES[code]}</option>`
+    ).join('');
+    return `<select class="lang-select" id="${selectId}">${opts}</select>`;
+  }
+
+  function renderHelpModal(){
+    const faqItems = [1,2,3,4,5].map(n => `
+      <div class="faq-item">
+        <div class="faq-q">${t('faqQ'+n)}</div>
+        <div class="faq-a">${t('faqA'+n)}</div>
+      </div>
+    `).join('');
+
+    const soundOptions = ['siren','bell','digital'];
+    const settingsBody = `
+      <div class="settings-panel-row">
+        <span>${t('settingsVibrationLabel')}</span>
+        <button class="ghost" id="helpToggleVibration" style="font-size:12px;">${state.vibrationEnabled ? t('vibrationOn') : t('vibrationOff')}</button>
+      </div>
+
+      <div class="settings-panel-row" style="flex-direction:column; align-items:stretch;">
+        <span style="margin-bottom:8px;">${t('settingsSoundLabel')}</span>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          ${soundOptions.map(s => `
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button class="ghost" style="flex:1; text-align:left; font-size:12px; ${state.alarmSound===s ? 'border-color:var(--teal); color:var(--teal);' : ''}" data-sound="${s}" id="helpSound_${s}">
+                ${state.alarmSound===s ? '● ' : '○ '}${t('sound_'+s)}
+              </button>
+              <button class="ghost" style="font-size:12px; padding:8px 10px;" data-preview="${s}" id="helpPreview_${s}">▶</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="settings-panel-row">
+        <span>${t('settingsCameraLabel')}</span>
+        <div class="theme-switch">
+          <button class="theme-btn ${state.cameraFacing==='user'?'active':''}" id="helpCameraFront" style="font-size:11px; width:auto; padding:4px 9px;">${t('cameraFront')}</button>
+          <button class="theme-btn ${state.cameraFacing==='environment'?'active':''}" id="helpCameraBack" style="font-size:11px; width:auto; padding:4px 9px;">${t('cameraBack')}</button>
+        </div>
+      </div>
+
+      <div class="settings-panel-row" style="flex-direction:column; align-items:stretch;">
+        <span style="margin-bottom:6px;">${t('settingsDayStartLabel')}</span>
+        <input type="number" id="helpDayStartHour" min="0" max="23" value="${state.dayStartHour}"
+          style="background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:8px 10px; font-size:13px; width:100%;">
+        <div style="font-size:11px; color:var(--text-dim); margin-top:6px; line-height:1.5;">${t('dayStartHint')}</div>
+      </div>
+    `;
+
+    return `
+      <div class="overlay" id="helpOverlay">
+        <div class="modal">
+          <div class="help-tabs">
+            <button class="help-tab-btn ${state.helpTab==='faq'?'active':''}" id="helpTabFaqBtn">${t('helpTabFaq')}</button>
+            <button class="help-tab-btn ${state.helpTab==='settings'?'active':''}" id="helpTabSettingsBtn">${t('helpTabSettings')}</button>
+          </div>
+          <div style="max-height:420px; overflow-y:auto;">
+            ${state.helpTab === 'faq' ? faqItems : settingsBody}
+          </div>
+          <div class="row" style="margin-top:14px;">
+            <button class="ghost full" id="btnCloseHelp">${t('historyClose')}</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindHelpEvents(){
+    const $ = id => document.getElementById(id);
+    if($('btnOpenHelp')) $('btnOpenHelp').onclick = () => { state.helpOpen = true; render(); };
+    if($('btnCloseHelp')) $('btnCloseHelp').onclick = () => { state.helpOpen = false; render(); };
+    if($('helpOverlay')) $('helpOverlay').onclick = (e) => { if(e.target.id === 'helpOverlay'){ state.helpOpen = false; render(); } };
+    if($('helpTabFaqBtn')) $('helpTabFaqBtn').onclick = () => { state.helpTab = 'faq'; render(); };
+    if($('helpTabSettingsBtn')) $('helpTabSettingsBtn').onclick = () => { state.helpTab = 'settings'; render(); };
+
+    if($('helpToggleVibration')) $('helpToggleVibration').onclick = () => { state.vibrationEnabled = !state.vibrationEnabled; render(); };
+
+    ['siren','bell','digital'].forEach(s => {
+      if($('helpSound_'+s)) $('helpSound_'+s).onclick = () => { state.alarmSound = s; render(); };
+      if($('helpPreview_'+s)) $('helpPreview_'+s).onclick = (e) => { e.stopPropagation(); previewAlarmSound(s); };
+    });
+
+    if($('helpCameraFront')) $('helpCameraFront').onclick = () => { state.cameraFacing = 'user'; render(); };
+    if($('helpCameraBack')) $('helpCameraBack').onclick = () => { state.cameraFacing = 'environment'; render(); };
+
+    if($('helpDayStartHour')) $('helpDayStartHour').onchange = (e) => {
+      let v = parseInt(e.target.value, 10);
+      if(isNaN(v)) v = 0;
+      v = Math.max(0, Math.min(23, v));
+      state.dayStartHour = v;
+      render();
+    };
+  }
+
+  function renderConsentModal(){
+    return `
+      <div class="consent-overlay">
+        <div class="consent-modal">
+          <div style="margin-bottom:14px;">
+            ${renderLangSelect('consentLangSelect')}
+          </div>
+          <h3>${t('consentTitle')}</h3>
+          <div class="body">${t('consentBody')}</div>
+          <label class="consent-check-row">
+            <input type="checkbox" id="consentCheckbox" ${state.consentChecked ? 'checked' : ''}>
+            <span>${t('consentCheckbox')}</span>
+          </label>
+          <label class="consent-check-row" style="opacity:.8;">
+            <input type="checkbox" id="dontShowAgainCheckbox" ${state.dontShowAgainChecked ? 'checked' : ''}>
+            <span>${t('dontShowAgain')}</span>
+          </label>
+          <button class="primary full" id="consentConfirmBtn" ${state.consentChecked ? '' : 'disabled'}>${t('consentBtn')}</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindConsentEvents(){
+    const $ = id => document.getElementById(id);
+    if($('consentLangSelect')) $('consentLangSelect').onchange = (e) => { state.lang = e.target.value; render(); };
+    if($('consentCheckbox')) $('consentCheckbox').onchange = (e) => { state.consentChecked = e.target.checked; render(); };
+    if($('dontShowAgainCheckbox')) $('dontShowAgainCheckbox').onchange = (e) => { state.dontShowAgainChecked = e.target.checked; render(); };
+    if($('consentConfirmBtn')) $('consentConfirmBtn').onclick = () => {
+      if(!state.consentChecked) return;
+      state.privacyConsented = true;
+      try{
+        if(state.dontShowAgainChecked){
+          // "다시 표시하지 않기"를 체크한 경우: 영구 동의로 저장 (24시간 제한 없음)
+          localStorage.setItem('hydrocheck_privacy_consent_permanent', 'true');
+        } else {
+          // 체크 안 한 경우: 기존처럼 24시간 동안만 유효
+          localStorage.setItem('hydrocheck_privacy_consent_at', Date.now().toString());
+        }
+      }catch(e){}
+      render();
+    };
+  }
+
+  function intervalMinutes(){
+    const drinksNeeded = state.goalMl / state.perDrinkMl;
+    const windowMin = state.windowHours * 60;
+    return Math.max(1, Math.round(windowMin / drinksNeeded));
+  }
+
+  function fmt(sec){
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = Math.floor(sec%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+  }
+
+  function render(){
+    savePersisted();
+    document.body.classList.toggle('light', state.theme === 'light');
+    const themeColorMeta = document.getElementById('themeColorMeta');
+    if(themeColorMeta) themeColorMeta.setAttribute('content', state.theme === 'light' ? '#F4F7F8' : '#0D1319');
+    const intervalMin = intervalMinutes();
+    const totalSec = intervalMin*60;
+    const pct = state.remainingSec==null ? 0 : Math.max(0, Math.min(1, 1 - state.remainingSec/totalSec));
+    const R = 118;
+    const C = 2*Math.PI*R;
+    const dash = C - pct*C;
+    const progressPct = Math.min(100, (state.consumedMl/state.goalMl*100)).toFixed(0);
+
+    // 최초 1회 개인정보 고지에 동의하기 전에는 앱 본체를 렌더링하지 않고 동의 화면만 보여준다.
+    if(!state.privacyConsented){
+      appEl.innerHTML = renderConsentModal();
+      bindConsentEvents();
+      return;
+    }
+
+    appEl.innerHTML = `
+      <div class="hdr">
+        <div>
+          <div class="tag">${t('tag')}</div>
+          <h1>${t('title')}</h1>
+          <div class="lang-switch">
+            ${renderLangSelect('headerLangSelect')}
+            <span style="width:6px;"></span>
+            <div class="theme-switch">
+              <button class="theme-btn ${state.theme==='dark'?'active':''}" id="themeDark" title="Dark mode" aria-label="다크 모드로 전환" aria-pressed="${state.theme==='dark'}">🌙</button>
+              <button class="theme-btn ${state.theme==='light'?'active':''}" id="themeLight" title="Light mode" aria-label="라이트 모드로 전환" aria-pressed="${state.theme==='light'}">☀️</button>
+            </div>
+          </div>
+        </div>
+        <div class="status-line">
+          <div id="clockDisplay" class="clock-display"></div>
+          ${state.offline
+            ? `<span class="offline-badge">🔴 ${t('offlineLabel')}</span>`
+            : `<span class="online-badge">🟢 ${t('onlineLabel')}</span>`}
+          <span class="status-dot ${state.alarm ? 'alarm' : (state.running?'on':'')}"></span>
+          ${state.alarm ? t('statusAlarm') : (state.running ? t('statusOn') : t('statusOff'))}
+          <button class="help-btn" id="btnOpenHelp" aria-label="${t('helpBtnLabel')}" title="${t('helpBtnLabel')}">🔍</button>
+        </div>
+      </div>
+
+      <div class="account-row">
+        ${state.user
+          ? `<div class="account-info">
+               <img src="${state.user.photoURL || ''}" class="account-avatar" onerror="this.style.display='none'">
+               <span class="account-name">${state.user.displayName || state.user.email || ''}</span>
+               ${state.syncing ? `<span class="sync-dot" title="${t('syncingNote')}"></span>` : ''}
+               <button class="ghost" id="btnHistory" style="font-size:11px; padding:5px 10px;">${t('btnHistory')}</button>
+               <button class="ghost" id="btnLogout" style="font-size:11px; padding:5px 10px;">${t('btnLogout')}</button>
+             </div>`
+          : `<div class="account-info">
+               <button class="ghost" id="btnLogin" style="font-size:12px;">${t('btnLogin')}</button>
+             </div>`
+        }
+      </div>
+      ${!state.user ? `<div class="guest-note">${t('guestNote')}</div>` : ''}
+
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 260 260">
+          <circle class="ring-bg" cx="130" cy="130" r="${R}"/>
+          <circle class="ring-fg ${state.alarm?'alarm':''}" cx="130" cy="130" r="${R}"
+            stroke-dasharray="${C}" stroke-dashoffset="${state.running||state.alarm?dash:0}"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-time">${state.alarm ? '🔔' : fmt(state.remainingSec ?? totalSec)}</div>
+          <div class="ring-sub">${state.alarm ? t('ringAlarmSub') : (state.running ? t('ringRunningSub', intervalMin) : t('ringIdleSub', intervalMin))}</div>
+        </div>
+      </div>
+
+      <div class="row">
+        ${!state.running && !state.alarm ? `<button class="primary full" id="btnStart">${t('btnStart')}</button>` : ''}
+        ${state.running && !state.alarm ? `<button class="danger full" id="btnStop">${t('btnStop')}</button>` : ''}
+        ${state.alarm ? `<button class="primary full" id="btnOpenCam">${t('btnOpenCam')}</button>` : ''}
+      </div>
+      ${state.alarm && !state.snoozeUsed ? `
+      <div class="row">
+        <button class="ghost full" id="btnSnooze" style="font-size:12px;">${t('btnSnooze')}</button>
+      </div>` : ''}
+      ${!state.alarm ? `
+      <div class="row">
+        <button class="ghost full" id="btnTest" style="font-size:12px;">${t('btnTest')}</button>
+      </div>
+      <div class="judge-banner">${t('judgeBanner')}</div>` : ''}
+
+      <div class="panel">
+        <h2>${t('todayIntakeTitle')}</h2>
+        <div class="progress-row">
+          <span class="num"><b>${state.consumedMl}</b> / ${state.goalMl} ml</span>
+          <span class="num">${progressPct}%</span>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:${progressPct}%"></div></div>
+        <div class="log">
+          ${state.log.length===0 ? `<div class="empty">${t('emptyLog')}</div>` :
+            state.log.slice().reverse().map(l=>`<div class="log-item"><span>${l.time}</span><span>+${l.ml}ml</span></div>`).join('')}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>${t('statsTitle')}</h2>
+        ${renderStats()}
+      </div>
+
+      <div class="panel">
+        <h2>${t('settingsTitle')}</h2>
+        <div class="settings-grid">
+          <div class="field">
+            <label>${t('labelGoal')}</label>
+            <input type="number" id="inGoal" value="${state.goalMl}" step="100">
+          </div>
+          <div class="field">
+            <label>${t('labelWindow')}</label>
+            <input type="number" id="inWindow" value="${state.windowHours}" step="0.5">
+          </div>
+          <div class="field">
+            <label>${t('labelDrink')}</label>
+            <input type="number" id="inDrink" value="${state.perDrinkMl}" step="50">
+          </div>
+        </div>
+        <div class="derived">${t('derived', intervalMinutes(), state.perDrinkMl, Math.ceil(state.goalMl/state.perDrinkMl))}</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="ghost full" id="btnResetToday" style="font-size:12px;">${t('btnResetToday')}</button>
+        </div>
+      </div>
+
+      <div class="footnote">
+        ${t('footnote')}
+      </div>
+
+      ${state.camOpen ? renderModal() : ''}
+      ${state.historyOpen ? renderHistoryModal() : ''}
+      ${state.helpOpen ? renderHelpModal() : ''}
+    `;
+    bindEvents(intervalMin);
+    bindHelpEvents();
+    updateClock();
+
+    // render()가 innerHTML을 다시 그리면 <video> 태그도 새로 생성되어 기존 스트림 연결이 끊긴다.
+    // 카메라가 켜져 있는 상태(state.stream 존재)라면 새로 생긴 video 태그에 스트림을 다시 붙여준다.
+    if(state.camOpen && state.stream){
+      const videoEl = document.getElementById('video');
+      if(videoEl && videoEl.srcObject !== state.stream){
+        videoEl.srcObject = state.stream;
+      }
+    }
+  }
+
+  function renderStats(){
+    const successCount = state.log.length;
+    const failCount = state.failCount;
+    const totalAttempts = successCount + failCount;
+    if(totalAttempts === 0){
+      return `<div class="empty">${t('statsNoData')}</div>`;
+    }
+    const rate = Math.round((successCount/totalAttempts)*100);
+    let avgIntervalMin = '-';
+    if(state.log.length >= 2){
+      const sorted = state.log.slice().sort((a,b)=>a.ts-b.ts);
+      let diffs = [];
+      for(let i=1;i<sorted.length;i++){ diffs.push((sorted[i].ts - sorted[i-1].ts)/60000); }
+      avgIntervalMin = Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length);
+    }
+    return `
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num">${totalAttempts}</div><div class="stat-label">${t('statsAttempts')}</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--teal)">${successCount}</div><div class="stat-label">${t('statsSuccess')}</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#ff6b6b">${failCount}</div><div class="stat-label">${t('statsFail')}</div></div>
+        <div class="stat-box"><div class="stat-num">${rate}%</div><div class="stat-label">${t('statsRate')}</div></div>
+        <div class="stat-box"><div class="stat-num">${avgIntervalMin}${typeof avgIntervalMin==='number'?t('minUnit'):''}</div><div class="stat-label">${t('statsAvgInterval')}</div></div>
+      </div>
+    `;
+  }
+
+  function renderModal(){
+    let verdictHtml = '';
+    if(state.verdict === 'pending'){
+      verdictHtml = `<div class="verdict pending">${t('verdictPending')}</div>`;
+    } else if(state.verdict === 'yes'){
+      verdictHtml = `<div class="verdict yes">${t('verdictYes', state.verdictReason)}</div>`;
+    } else if(state.verdict === 'no'){
+      verdictHtml = `<div class="verdict no">${t('verdictNo', state.verdictReason)}</div>`;
+    }
+    return `
+      <div class="overlay" id="overlay">
+        <div class="modal">
+          <h3>${t('modalTitle')}</h3>
+          <p class="desc">${t('modalDesc')}</p>
+          <div class="video-wrap">
+            <video id="video" class="${state.cameraFacing === 'user' ? 'mirror' : ''}" autoplay playsinline muted></video>
+            <button class="flash-icon-btn ${state.screenFlashOn ? 'active' : ''}" id="btnToggleFlash" aria-label="${state.screenFlashOn ? t('flashOn') : t('flashOff')}" title="${state.screenFlashOn ? t('flashOn') : t('flashOff')}">⚡</button>
+          </div>
+          ${verdictHtml}
+          <div class="row" style="margin-top:12px;">
+            <button class="ghost" id="btnCancel">${t('btnCancel')}</button>
+            ${state.verdict === 'no'
+              ? `<button class="primary" id="btnRetry">${t('btnRetry')}</button>`
+              : `<button class="primary" id="btnCapture" ${state.verdict==='pending'?'disabled':''}>${t('btnCapture')}</button>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderHistoryModal(){
+    const rows = state.history.length === 0
+      ? `<div class="empty">${t('historyEmpty')}</div>`
+      : state.history.map(d => `
+          <div class="log-item">
+            <span>${d.date}</span>
+            <span>${d.consumedMl ?? 0}ml · ${d.successCount ?? 0}${state.lang==='ko'?'회 성공':state.lang==='ja'?'回成功':' success'}</span>
+          </div>
+        `).join('');
+    return `
+      <div class="overlay" id="historyOverlay">
+        <div class="modal">
+          <h3>${t('historyTitle')}</h3>
+          <div class="log" style="max-height:340px; overflow-y:auto;">${rows}</div>
+          <div class="row" style="margin-top:12px;">
+            <button class="ghost full" id="btnHistoryClose">${t('historyClose')}</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindEvents(intervalMin){
+    const $ = id => document.getElementById(id);
+
+    if($('inGoal')) $('inGoal').onchange = e => { state.goalMl = Math.max(500, +e.target.value||3500); render(); };
+    if($('inWindow')) $('inWindow').onchange = e => { state.windowHours = Math.max(1, +e.target.value||9); render(); };
+    if($('inDrink')) $('inDrink').onchange = e => { state.perDrinkMl = Math.max(50, +e.target.value||200); render(); };
+
+    if($('btnStart')) $('btnStart').onclick = () => startTimer(intervalMin);
+    if($('btnStop')) $('btnStop').onclick = stopTimer;
+    if($('btnOpenCam')) $('btnOpenCam').onclick = openCamera;
+    if($('btnSnooze')) $('btnSnooze').onclick = snoozeAlarm;
+    if($('btnTest')) $('btnTest').onclick = () => {
+      unlockAudio(); // 버튼 클릭(사용자 제스처) 시점에 오디오 언락
+      clearInterval(state.intervalId);
+      triggerAlarm();
+    };
+    if($('headerLangSelect')) $('headerLangSelect').onchange = (e) => { state.lang = e.target.value; render(); };
+    if($('themeDark')) $('themeDark').onclick = () => { state.theme = 'dark'; render(); };
+    if($('themeLight')) $('themeLight').onclick = () => { state.theme = 'light'; render(); };
+    if($('btnCancel')) $('btnCancel').onclick = closeCamera;
+    if($('btnCapture')) $('btnCapture').onclick = captureAndVerify;
+    if($('btnToggleFlash')) $('btnToggleFlash').onclick = async () => {
+      state.screenFlashOn = !state.screenFlashOn;
+      render();
+      if(state.screenFlashOn){
+        // 켜는 순간 바로 한 번 번쩍여서, 버튼만 눌러서는 아무 반응이 없다는 혼란을 없앤다.
+        await triggerScreenFlash();
+        endScreenFlash();
+      }
+    };
+    if($('btnRetry')) $('btnRetry').onclick = () => { state.verdict = null; state.verdictReason=''; render(); };
+    if($('btnResetToday')) $('btnResetToday').onclick = resetToday;
+    if($('btnLogin')) $('btnLogin').onclick = signInWithGoogle;
+    if($('btnLogout')) $('btnLogout').onclick = signOutUser;
+    if($('btnHistory')) $('btnHistory').onclick = openHistory;
+    if($('btnHistoryClose')) $('btnHistoryClose').onclick = () => { state.historyOpen = false; render(); };
+    if($('historyOverlay')) $('historyOverlay').onclick = (e) => { if(e.target.id === 'historyOverlay'){ state.historyOpen = false; render(); } };
+  }
+
+  // ---------- timer ----------
+  function armCountdown(seconds){
+    clearInterval(state.intervalId);
+    state.remainingSec = seconds;
+    state.intervalId = setInterval(()=>{
+      state.remainingSec -= 1;
+      if(state.remainingSec <= 0){
+        clearInterval(state.intervalId);
+        triggerAlarm();
+      } else {
+        render();
+      }
+    }, 1000);
+  }
+
+  function startTimer(intervalMin){
+    unlockAudio(); // 사용자가 직접 누른 클릭 시점에 오디오를 미리 깨워둬야 나중에 타이머가 자동으로 알람 울릴 때도 소리가 막히지 않는다
+    state.running = true;
+    armCountdown(intervalMin*60);
+    render();
+  }
+
+  function stopTimer(){
+    state.running = false;
+    clearInterval(state.intervalId);
+    state.remainingSec = null;
+    render();
+  }
+
+  // 클린룸 퇴실·에어샤워 등 즉시 인증이 어려운 상황을 위한 5분 연기(스누즈) 기능.
+  // 알람 1회당 딱 한 번만 허용된다 - 한 번 쓰고 나면 물을 마셔서 인증할 때까지 계속 울린다.
+  function snoozeAlarm(){
+    if(state.snoozeUsed) return;
+    state.snoozeUsed = true;
+    stopBeep();
+    stopVibrate();
+    state.alarm = false;
+    state.running = true;
+    armCountdown(5*60);
+    render();
+  }
+
+  function triggerAlarm(){
+    state.running = false;
+    state.alarm = true;
+    playBeepLoop();
+    startVibrate();
+    render();
+  }
+
+  // ---------- sound ----------
+  function unlockAudio(){
+    if(!state.audioCtx) state.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(state.audioCtx.state === 'suspended') state.audioCtx.resume();
+    const osc = state.audioCtx.createOscillator();
+    const gain = state.audioCtx.createGain();
+    gain.gain.value = 0.0001;
+    osc.connect(gain).connect(state.audioCtx.destination);
+    osc.start();
+    osc.stop(state.audioCtx.currentTime + 0.05);
+  }
+
+  function playSiren(ctx, startAt){
+    [880, 1046.5].forEach((freq, i)=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      const t0 = startAt + i*0.22;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(1, t0+0.02);
+      gain.gain.linearRampToValueAtTime(0.0001, t0+0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0+0.24);
+    });
+  }
+  function playBell(ctx, startAt){
+    // 부드러운 단일 종소리(사인파, 서서히 감쇠)
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 987.77; // B5
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.linearRampToValueAtTime(0.9, startAt+0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt+0.9);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startAt);
+    osc.stop(startAt+0.9);
+  }
+  function playDigital(ctx, startAt){
+    // 짧고 또렷한 디지털 삐-삐 (톱니파, 높은 음)
+    [1568, 1568].forEach((freq, i)=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq;
+      const t0 = startAt + i*0.16;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(0.8, t0+0.015);
+      gain.gain.linearRampToValueAtTime(0.0001, t0+0.12);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0+0.14);
+    });
+  }
+  const SOUND_FN = { siren: playSiren, bell: playBell, digital: playDigital };
+  const SOUND_INTERVAL = { siren: 550, bell: 1000, digital: 500 };
+
+  function previewAlarmSound(soundName){
+    unlockAudio();
+    const ctx = state.audioCtx;
+    const fn = SOUND_FN[soundName] || playSiren;
+    fn(ctx, ctx.currentTime);
+  }
+
+  function playBeepLoop(){
+    if(!state.audioCtx) state.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = state.audioCtx;
+    if(ctx.state === 'suspended') ctx.resume();
+
+    function beep(){
+      if(!state.alarm) return;
+      if(ctx.state === 'suspended') ctx.resume(); // 모바일에서 화면이 잠깐 꺼졌다 켜졌을 때도 재개 시도
+      const fn = SOUND_FN[state.alarmSound] || playSiren;
+      fn(ctx, ctx.currentTime);
+      state.beepId = setTimeout(beep, SOUND_INTERVAL[state.alarmSound] || 550);
+    }
+    beep();
+  }
+  function stopBeep(){
+    clearTimeout(state.beepId);
+  }
+
+  // 모바일에서 화면이 꺼졌다 켜지거나 다른 앱으로 전환됐다 돌아왔을 때
+  // 오디오 컨텍스트가 일시정지된 상태로 남아있을 수 있어, 다시 활성화될 때 재개시킨다.
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && state.audioCtx && state.audioCtx.state === 'suspended'){
+      state.audioCtx.resume();
+    }
+  });
+
+  // 네트워크 연결 상태 변화를 감지해 화면에 실시간으로 표시
+  window.addEventListener('online', ()=>{ state.offline = false; render(); });
+  window.addEventListener('offline', ()=>{ state.offline = true; render(); });
+
+  // ---------- vibration ----------
+  function startVibrate(){
+    if(!navigator.vibrate) return; // iOS Safari는 진동 API 미지원
+    if(!state.vibrationEnabled) return; // 사용자가 설정에서 진동을 꺼둔 경우
+    function pulse(){
+      if(!state.alarm) return;
+      navigator.vibrate([500, 150, 500]);
+      state.vibrateId = setTimeout(pulse, 1300);
+    }
+    pulse();
+  }
+  function stopVibrate(){
+    clearTimeout(state.vibrateId);
+    if(navigator.vibrate) navigator.vibrate(0);
+  }
+
+  // ---------- camera ----------
+  async function openCamera(){
+    state.camOpen = true;
+    state.verdict = null;
+    render();
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode: state.cameraFacing }, audio:false });
+      state.stream = stream;
+      const video = document.getElementById('video');
+      if(video){ video.srcObject = stream; }
+    } catch(err){
+      alert(t('camDenied'));
+    }
+  }
+
+  function closeCamera(){
+    if(state.stream){ state.stream.getTracks().forEach(t=>t.stop()); state.stream=null; }
+    state.camOpen = false;
+    state.verdict = null;
+    render();
+  }
+
+  async function triggerScreenFlash(){
+    const el = document.getElementById('screenFlash');
+    if(!el) return;
+    el.classList.remove('off');
+    el.classList.add('on');
+    // 화면이 밝아진 빛이 실제로 얼굴에 비치고 카메라 노출이 적응할 시간을 잠깐 준다.
+    await new Promise(r => setTimeout(r, 260));
+  }
+  function endScreenFlash(){
+    const el = document.getElementById('screenFlash');
+    if(!el) return;
+    el.classList.remove('on');
+    el.classList.add('off');
+  }
+
+  async function captureAndVerify(){
+    const video = document.getElementById('video');
+    if(!video || !video.videoWidth){ alert(t('camNotReady')); return; }
+
+    if(state.screenFlashOn){
+      await triggerScreenFlash(); // 전면 카메라엔 물리 플래시가 없어 화면 밝기로 대신 조명
+    }
+
+    // 이미지가 너무 크면 업로드·AI 분석 시간이 길어져 타임아웃 위험이 커지므로
+    // 긴 변 기준 최대 800px로 축소해서 전송한다 (판별 정확도에는 지장 없는 수준).
+    const maxDim = 800;
+    const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    if(state.screenFlashOn) endScreenFlash();
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const base64 = dataUrl.split(',')[1];
+
+    state.verdict = 'pending';
+    render();
+
+    try{
+      const response = await fetch('/api/verify', {
+        method:'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ image: base64, lang: state.lang })
+      });
+      if(!response.ok){
+        const errData = await response.json().catch(()=>({}));
+        console.error('서버 오류 상세 (' + response.status + '):', errData.error || '알 수 없음');
+        // 상태 코드별로 원인이 다르므로 에러 키만 담아서 던지고, catch에서 언어별 문구로 변환
+        if(response.status === 429) throw new Error('rateLimitError');       // AI 사용량 한도 초과
+        if(response.status === 504) throw new Error('timeoutError');       // 진짜 응답 시간 초과 (60초 넘음)
+        if(response.status === 503) throw new Error('serviceBusyError');   // AI 서버가 빠르게 "혼잡함"으로 거절한 경우
+        throw new Error('friendlyError'); // 그 외 서버 오류
+      }
+      const result = await response.json();
+      const isYes = !!result.drinking;
+      const reason = result.reason || '';
+
+      if(!isYes) state.failCount += 1; // 실제 AI 판별 실패만 통계에 반영 (네트워크 오류는 미포함)
+
+      state.verdict = isYes ? 'yes' : 'no';
+      state.verdictReason = reason;
+      render();
+      if(isYes){
+        setTimeout(()=>{ closeCamera(); completeDrink(); }, 900);
+      }
+    } catch(err){
+      state.verdict = 'no';
+      // err.message가 우리가 정의한 오류 키(rateLimitError 등)면 그 문구를, 아니면(네트워크 단절 등) networkError 문구를 사용
+      const knownKeys = ['friendlyError','rateLimitError','timeoutError','serviceBusyError','networkError'];
+      state.verdictReason = t(knownKeys.includes(err.message) ? err.message : 'networkError');
+      render();
+      console.error('AI 판별 오류 (기술적 상세):', err); // 실제 오류 원인은 개발자 콘솔에만 기록
+    }
+  }
+
+  function completeDrink(){
+    state.alarm = false;
+    stopBeep();
+    stopVibrate();
+    state.snoozeUsed = false; // 새로운 알람 주기가 시작되므로 다음 알람에서는 다시 스누즈 가능
+    state.consumedMl += state.perDrinkMl;
+    const now = new Date();
+    state.log.push({ time: now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}), ml: state.perDrinkMl, ts: now.getTime() });
+    startTimer(intervalMinutes());
+  }
+
+  function resetToday(){
+    if(!confirm(t('confirmReset'))) return;
+    state.consumedMl = 0;
+    state.log = [];
+    state.failCount = 0;
+    savePersisted();
+    render();
+  }
+
+  // ---------- persistence ----------
+  // 게스트 모드: 실제 배포된 사이트(Vercel)에서는 새로고침 후에도 데이터가 유지됩니다.
+  // 로그인 모드: Firestore(클라우드)에 저장되어 기기를 바꿔도 기록이 유지됩니다.
+
+  // 교대근무자를 위해 "오늘"의 기준을 자정이 아니라 설정한 시각(dayStartHour)으로 옮긴다.
+  // 예: dayStartHour가 6이면, 새벽 6시 이전은 "어제"로 취급된다.
+  function getLogicalDay(d = new Date()){
+    const shifted = new Date(d);
+    if(d.getHours() < state.dayStartHour){
+      shifted.setDate(shifted.getDate() - 1);
+    }
+    return shifted;
+  }
+
+  function savePersisted(){
+    if(state.user){ saveToCloud(); return; }
+    try{
+      localStorage.setItem('hydrocheck_state', JSON.stringify({
+        date: getLogicalDay().toDateString(),
+        goalMl: state.goalMl,
+        windowHours: state.windowHours,
+        perDrinkMl: state.perDrinkMl,
+        consumedMl: state.consumedMl,
+        log: state.log,
+        failCount: state.failCount,
+        lang: state.lang,
+        theme: state.theme,
+        vibrationEnabled: state.vibrationEnabled,
+        alarmSound: state.alarmSound,
+        cameraFacing: state.cameraFacing,
+        dayStartHour: state.dayStartHour,
+      }));
+    }catch(e){ /* 저장소 사용 불가 환경 - 조용히 무시 */ }
+  }
+  function loadPersisted(){
+    try{
+      const raw = localStorage.getItem('hydrocheck_state');
+      if(!raw) return;
+      const saved = JSON.parse(raw);
+      state.goalMl = saved.goalMl ?? state.goalMl;
+      state.windowHours = saved.windowHours ?? state.windowHours;
+      state.perDrinkMl = saved.perDrinkMl ?? state.perDrinkMl;
+      state.lang = saved.lang ?? state.lang;
+      state.theme = saved.theme ?? state.theme;
+      state.vibrationEnabled = saved.vibrationEnabled ?? state.vibrationEnabled;
+      state.alarmSound = saved.alarmSound ?? state.alarmSound;
+      state.cameraFacing = saved.cameraFacing ?? state.cameraFacing;
+      state.dayStartHour = saved.dayStartHour ?? state.dayStartHour;
+      if(saved.date === getLogicalDay().toDateString()){
+        // 같은 논리적 하루(dayStartHour 기준)면 오늘 기록도 그대로 복원
+        state.consumedMl = saved.consumedMl ?? 0;
+        state.log = saved.log ?? [];
+        state.failCount = saved.failCount ?? 0;
+      }
+      // 날짜가 다르면 설정값만 유지하고 오늘 기록은 새로 시작
+    }catch(e){ /* 저장소 사용 불가 환경 - 조용히 무시 */ }
+    try{
+      if(localStorage.getItem('hydrocheck_privacy_consent_permanent') === 'true'){
+        state.privacyConsented = true; // "다시 표시하지 않기"를 선택했던 경우 - 영구적으로 안 물어봄
+      } else {
+        const consentedAt = parseInt(localStorage.getItem('hydrocheck_privacy_consent_at'), 10);
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        if(!isNaN(consentedAt) && (Date.now() - consentedAt) < ONE_DAY_MS){
+          state.privacyConsented = true; // 동의 후 24시간 이내면 다시 안 물어봄
+        }
+        // 24시간이 지났거나 동의 기록이 없으면 privacyConsented는 false로 유지되어 다시 동의를 받는다
+      }
+    }catch(e){ /* 저장소 사용 불가 환경 - 매번 동의 화면부터 시작 (안전한 기본값) */ }
+  }
+
+  // ---------- Firebase 로그인 & 클라우드 저장 (선택 사항) ----------
+  function dateKey(d = new Date()){
+    return getLogicalDay(d).toLocaleDateString('en-CA'); // "YYYY-MM-DD" 형식, Firestore 문서 ID로 사용. dayStartHour 기준 반영
+  }
+
+  function signInWithGoogle(){
+    if(!firebaseReady){ alert('Firebase 설정이 아직 완료되지 않았습니다. firebaseConfig 값을 확인해주세요.'); return; }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().signInWithPopup(provider).catch(err=>{
+      console.error('로그인 실패', err);
+      alert(t('loginError'));
+    });
+  }
+
+  function signOutUser(){
+    if(!firebaseReady) return;
+    firebase.auth().signOut();
+  }
+
+  async function saveToCloud(){
+    if(!state.user || !firebaseReady) return;
+    try{
+      const db = firebase.firestore();
+      const uid = state.user.uid;
+      await db.collection('users').doc(uid).set({
+        goalMl: state.goalMl, windowHours: state.windowHours, perDrinkMl: state.perDrinkMl,
+        lang: state.lang, theme: state.theme, updatedAt: new Date().toISOString(),
+        vibrationEnabled: state.vibrationEnabled, alarmSound: state.alarmSound,
+        cameraFacing: state.cameraFacing, dayStartHour: state.dayStartHour,
+      }, { merge: true });
+      await db.collection('users').doc(uid).collection('days').doc(dateKey()).set({
+        date: dateKey(), consumedMl: state.consumedMl, log: state.log,
+        failCount: state.failCount, successCount: state.log.length,
+      }, { merge: true });
+    }catch(e){
+      console.error('클라우드 저장 실패', e); // 저장 실패해도 화면 사용엔 지장 없도록 조용히 처리
+    }
+  }
+
+  async function loadFromCloud(){
+    if(!state.user || !firebaseReady) return;
+    state.syncing = true; render();
+    try{
+      const db = firebase.firestore();
+      const uid = state.user.uid;
+      const userDoc = await db.collection('users').doc(uid).get();
+      if(userDoc.exists){
+        const d = userDoc.data();
+        state.goalMl = d.goalMl ?? state.goalMl;
+        state.windowHours = d.windowHours ?? state.windowHours;
+        state.perDrinkMl = d.perDrinkMl ?? state.perDrinkMl;
+        state.lang = d.lang ?? state.lang;
+        state.theme = d.theme ?? state.theme;
+        state.vibrationEnabled = d.vibrationEnabled ?? state.vibrationEnabled;
+        state.alarmSound = d.alarmSound ?? state.alarmSound;
+        state.cameraFacing = d.cameraFacing ?? state.cameraFacing;
+        state.dayStartHour = d.dayStartHour ?? state.dayStartHour;
+      }
+      const dayDoc = await db.collection('users').doc(uid).collection('days').doc(dateKey()).get();
+      if(dayDoc.exists){
+        const d = dayDoc.data();
+        state.consumedMl = d.consumedMl ?? 0;
+        state.log = d.log ?? [];
+        state.failCount = d.failCount ?? 0;
+      } else {
+        state.consumedMl = 0; state.log = []; state.failCount = 0;
+      }
+    }catch(e){
+      console.error('클라우드 불러오기 실패', e);
+    }finally{
+      state.syncing = false;
+      render();
+    }
+  }
+
+  async function openHistory(){
+    state.historyOpen = true;
+    render();
+    if(!state.user || !firebaseReady) return;
+    try{
+      const db = firebase.firestore();
+      const snap = await db.collection('users').doc(state.user.uid).collection('days')
+        .orderBy('date','desc').limit(14).get();
+      state.history = snap.docs.map(doc => doc.data());
+      render();
+    }catch(e){
+      console.error('기록 불러오기 실패', e);
+    }
+  }
+
+  // 로그인 상태가 바뀔 때마다: 로그인 → 클라우드에서 불러오기 / 로그아웃 → 게스트 로컬 저장값으로 복귀
+  if(firebaseReady){
+    firebase.auth().onAuthStateChanged(async (user)=>{
+      state.user = user;
+      state.authReady = true;
+      if(user){
+        await loadFromCloud();
+      } else {
+        loadPersisted();
+        render();
+      }
+    });
+  }
+
+  // ---------- clock (언어별 시간대: 한국어=서울, 영어=미국 수도 워싱턴 D.C., 일본어=도쿄) ----------
+  // 참고: 워싱턴 D.C.와 뉴욕은 같은 동부시간대(America/New_York)를 사용하므로 시간 값은 동일합니다.
+  const CLOCK_CONFIG = {
+    ko: { timeZone: 'Asia/Seoul', label: 'KST' },
+    en: { timeZone: 'America/New_York', label: 'ET' },
+    ja: { timeZone: 'Asia/Tokyo', label: 'JST' },
+  };
+  function updateClock(){
+    const el = document.getElementById('clockDisplay');
+    if(!el) return;
+    const cfg = CLOCK_CONFIG[state.lang] || CLOCK_CONFIG.ko;
+    const now = new Date();
+    // 언어와 무관하게 항상 영문 AM/PM 표기로 통일해서 표시
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: cfg.timeZone, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+    }).formatToParts(now);
+    const get = type => parts.find(p=>p.type===type).value;
+    let h = parseInt(get('hour'), 10);
+    const m = get('minute');
+    const s = get('second');
+    const ampm = h < 12 ? 'AM' : 'PM';
+    h = h % 12; if(h === 0) h = 12;
+    const hh = String(h).padStart(2,'0');
+    el.textContent = `${hh}:${m}:${s} ${ampm} ${cfg.label}`;
+  }
+  setInterval(updateClock, 1000);
+
+  loadPersisted();
+  render();
+  updateClock();
+})();
+</script>
+</body>
+</html>
