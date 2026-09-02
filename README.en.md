@@ -142,8 +142,6 @@ vercel dev
 
 ## 9. Future Roadmap
 
-The items below are not yet implemented and are planned for development during the 8-week coaching period.
-
 - **Dual alarm structure**: A second alarm timed to work-area exit windows
 - **Automatic shift-pattern adjustment**: Automatically adjust the alarm interval based on work shifts
 - **QR entry/exit tagging**: A QR code posted at the worksite entrance lets workers scan it on exit, automatically logging the exit time and using it to fine-tune alarm timing (AI photo verification remains the sole method of hydration verification — QR only serves the supporting role of "detecting exit time")
