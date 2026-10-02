@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Water-Cycle · 소개 및 사용법 영상</title>
+<style>
+  :root{
+    --teal:#0E9C8C; --teal-dim:#1C6F65; --navy:#0D1319; --panel:#141C24; --panel-2:#1A232C;
+    --line:#2A3540; --text:#E7EEF2; --text-dim:#8FA3AE;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; background:var(--navy); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;
+    display:flex; justify-content:center; padding:32px 16px;
+  }
+  .wrap{ width:100%; max-width:720px; }
+  .tag{
+    display:inline-block; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.04em;
+    color:var(--teal); background:rgba(14,156,140,.12); border:1px solid var(--teal-dim);
+    padding:3px 10px; border-radius:999px; margin-bottom:10px;
+  }
+  h1{ font-size:24px; margin:0 0 6px 0; }
+  .desc{ color:var(--text-dim); font-size:14px; line-height:1.6; margin-bottom:22px; }
+  .video-frame{
+    position:relative; width:100%; padding-top:56.25%; border-radius:14px; overflow:hidden;
+    background:#000; border:1px solid var(--line); margin-bottom:26px;
+  }
+  .video-frame iframe{ position:absolute; top:0; left:0; width:100%; height:100%; border:0; }
+  .steps{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:20px; }
+  .steps h2{ font-size:15px; margin:0 0 12px 0; color:var(--teal); }
+  .step-row{ display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+  .step-row:last-child{ margin-bottom:0; }
+  .step-num{
+    flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--teal); color:#06231f;
+    font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center;
+  }
+  .step-text b{ display:block; font-size:14px; margin-bottom:2px; }
+  .step-text span{ font-size:12.5px; color:var(--text-dim); }
+  .back-link{
+    display:inline-block; margin-top:4px; color:var(--text-dim); font-size:13px; text-decoration:none;
+    border:1px solid var(--line); padding:8px 16px; border-radius:10px;
+  }
+  .back-link:hover{ border-color:var(--teal); color:var(--teal); }
+  .footer{ text-align:center; font-size:11px; color:#5C7280; margin-top:28px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tag">HYDRA-01 · 소개 영상</div>
+    <h1>Water-Cycle 소개 및 사용법</h1>
+    <p class="desc">산업 현장에서 일하는 근로자를 위한 물 마시기 알림 서비스, Water-Cycle을 3분 안에 소개합니다. 알람부터 AI 인증까지 전체 흐름을 영상으로 확인해보세요.</p>
+
+    <div class="video-frame">
+      <iframe src="https://www.youtube.com/embed/ApWkJ1hUQ2w" title="Water-Cycle 소개 영상" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+
+    <div class="steps">
+      <h2>사용 방법 한눈에 보기</h2>
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-text"><b>목표 설정</b><span>하루 목표 섭취량과 근무 시간을 입력하면 알람 간격이 자동으로 계산돼요.</span></div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-text"><b>알람 확인</b><span>정해진 시간마다 알람이 울려요.</span></div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-text"><b>촬영 및 AI 인증</b><span>물 마시는 모습을 촬영하면 AI가 실제로 마셨는지 확인해요.</span></div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">4</div>
+        <div class="step-text"><b>알람 해제</b><span>인증에 성공하면 알람이 꺼지고 다음 주기가 시작돼요.</span></div>
+      </div>
+    </div>
+
+    <a class="back-link" href="javascript:window.close()">탭 닫고 돌아가기</a>
+    <div class="footer">Water-Cycle · AI도 놀랄 팀 · NAVER OGQ마켓 AI Competition</div>
+  </div>
+</body>
+</html>
