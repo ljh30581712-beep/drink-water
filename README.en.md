@@ -79,8 +79,10 @@ graph TD
 ## 5. How to Run
 
 ### Try it now (recommended)
-Visit the [live demo](https://drink-water-five-drab.vercel.app/) → tap **"⚡ Trigger Alarm Now (Demo)"** to experience the alarm instantly without waiting → take a photo of yourself drinking water → see the AI verdict.
+**For regular users**: Visit the [live demo](https://drink-water-five-drab.vercel.app/) → set a goal and wait for the alarm → take a photo of yourself drinking water → see the AI verdict.
 (You can try the full experience without signing in; Google Sign-In is available as an optional test in the top-right corner.)
+
+**For judges/mentors (quick test)**: Visit [https://drink-water-five-drab.vercel.app/?judge=1](https://drink-water-five-drab.vercel.app/?judge=1) to reveal an extra **"⚡ Trigger Alarm Now"** button that lets you experience the alarm instantly without waiting. This button is intentionally hidden on the regular link shared with end users.
 
 ### Run locally
 ```bash
@@ -110,6 +112,12 @@ vercel dev
 | How it's used | A single photo taken by the user is analyzed with Vision (image understanding) to determine whether they're drinking water/a beverage. The result (true/false) and a short reason are returned as JSON and used to decide whether to dismiss the alarm |
 | Why it's redundant | Because popular models can occasionally see delayed responses, the service automatically falls back to a lighter model within the same provider to improve reliability |
 | Scope of use | **AI photo verification is the only method of authentication.** Neither a button tap nor a QR scan alone completes verification — the service cannot function without the AI verdict. |
+
+**Competition-provided resource (bonus feature)**
+
+| Item | Details |
+|---|---|
+| OGQ Market Content API | Using the API provided by the organizer (NAVER OGQ Market), a free OGQ Market sticker is shown at random as a small reward each time hydration verification succeeds. The API key is used only on the server (`api/sticker.js`), with a 5-minute server-side cache to stay within the per-minute rate limit. This is purely a bonus feature — if the key is missing or the call fails, the core function (AI hydration verification) is completely unaffected. |
 
 **Development assistance tools (used during planning/production)**
 
