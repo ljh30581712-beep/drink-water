@@ -447,6 +447,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       faqA4: '스누즈는 알람 1회당 딱 한 번만 사용할 수 있어요. 이미 한 번 사용했다면, 다시 울릴 때는 실제로 물을 마셔야 알람이 꺼져요.',
       faqQ5: '기록이 사라졌어요',
       faqA5: '로그인하지 않으면 기록은 이 브라우저에만 저장돼요. 브라우저를 지우거나 기기를 바꾸면 사라질 수 있어요. Google 로그인을 하면 기록이 클라우드에 저장되어 유지됩니다.',
+      settingsLangLabel: '언어',
+      settingsThemeLabel: '화면 테마',
       settingsVibrationLabel: '진동',
       vibrationOn: '켜짐',
       vibrationOff: '꺼짐',
@@ -540,6 +542,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       faqA4: 'Snooze can only be used once per alarm. If you\'ve already used it, the next time it rings you must actually drink water to turn it off.',
       faqQ5: 'My records disappeared',
       faqA5: 'Without signing in, records are saved only in this browser and may be lost if you clear it or switch devices. Sign in with Google to keep records in the cloud.',
+      settingsLangLabel: 'Language',
+      settingsThemeLabel: 'Theme',
       settingsVibrationLabel: 'Vibration',
       vibrationOn: 'On',
       vibrationOff: 'Off',
@@ -633,6 +637,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       faqA4: 'スヌーズはアラーム1回につき1度しか使えません。すでに使用した場合、次に鳴った時は実際に水を飲まないとアラームが止まりません。',
       faqQ5: '記録が消えてしまいました',
       faqA5: 'ログインしない場合、記録はこのブラウザにのみ保存されます。ブラウザを削除したり機種変更すると消える可能性があります。Googleでログインすると記録がクラウドに保存され保持されます。',
+      settingsLangLabel: '言語',
+      settingsThemeLabel: 'テーマ',
       settingsVibrationLabel: '振動',
       vibrationOn: 'オン',
       vibrationOff: 'オフ',
@@ -726,6 +732,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       faqA4: '贪睡功能每次闹钟仅可使用一次。如果已经使用过一次，下次响铃时必须实际饮水才能关闭闹钟。',
       faqQ5: '记录消失了',
       faqA5: '如果不登录，记录仅保存在此浏览器中。清除浏览器数据或更换设备可能导致记录丢失。登录Google账号后，记录将保存在云端并保留。',
+      settingsLangLabel: '语言',
+      settingsThemeLabel: '主题',
       settingsVibrationLabel: '震动',
       vibrationOn: '开启',
       vibrationOff: '关闭',
@@ -819,6 +827,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       faqA4: 'Chức năng hoãn chỉ có thể dùng một lần cho mỗi lần báo thức. Nếu đã dùng một lần, lần reo tiếp theo bạn phải thực sự uống nước để tắt báo thức.',
       faqQ5: 'Dữ liệu của tôi bị mất',
       faqA5: 'Nếu không đăng nhập, dữ liệu chỉ được lưu trên trình duyệt này và có thể mất nếu xóa dữ liệu trình duyệt hoặc đổi thiết bị. Đăng nhập bằng Google để lưu dữ liệu trên đám mây.',
+      settingsLangLabel: 'Ngôn ngữ',
+      settingsThemeLabel: 'Giao diện',
       settingsVibrationLabel: 'Rung',
       vibrationOn: 'Bật',
       vibrationOff: 'Tắt',
@@ -912,6 +922,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       faqA4: 'ฟังก์ชันเลื่อนเวลาใช้ได้เพียงครั้งเดียวต่อการปลุกหนึ่งครั้ง หากใช้ไปแล้วหนึ่งครั้ง เมื่อเสียงปลุกดังอีกครั้งต้องดื่มน้ำจริงเพื่อปิดเสียงปลุก',
       faqQ5: 'ข้อมูลของฉันหายไป',
       faqA5: 'หากไม่เข้าสู่ระบบ ข้อมูลจะถูกบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น และอาจหายไปหากลบข้อมูลเบราว์เซอร์หรือเปลี่ยนอุปกรณ์ เข้าสู่ระบบด้วย Google เพื่อบันทึกข้อมูลไว้บนคลาวด์',
+      settingsLangLabel: 'ภาษา',
+      settingsThemeLabel: 'ธีม',
       settingsVibrationLabel: 'การสั่น',
       vibrationOn: 'เปิด',
       vibrationOff: 'ปิด',
@@ -1005,6 +1017,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       faqA4: 'Fitur tunda hanya bisa digunakan sekali per alarm. Jika sudah digunakan sekali, saat berbunyi lagi Anda harus benar-benar minum air untuk mematikan alarm.',
       faqQ5: 'Data saya hilang',
       faqA5: 'Jika tidak masuk (login), data hanya disimpan di browser ini dan bisa hilang jika data browser dihapus atau perangkat diganti. Masuk dengan Google agar data tersimpan di cloud.',
+      settingsLangLabel: 'Bahasa',
+      settingsThemeLabel: 'Tema',
       settingsVibrationLabel: 'Getaran',
       vibrationOn: 'Aktif',
       vibrationOff: 'Nonaktif',
@@ -1098,6 +1112,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       faqA4: 'Isang beses lang puwedeng gamitin ang snooze bawat alarm. Kung nagamit mo na ito, sa susunod na pagtunog kailangan mo talagang uminom ng tubig para mapatay ang alarm.',
       faqQ5: 'Nawala ang aking record',
       faqA5: 'Kung hindi ka naka-login, naka-save lamang ang record sa browser na ito at maaaring mawala kapag na-clear ang browser data o napalitan ng device. Mag-login gamit ang Google para ma-save sa cloud ang record.',
+      settingsLangLabel: 'Wika',
+      settingsThemeLabel: 'Tema',
       settingsVibrationLabel: 'Vibration',
       vibrationOn: 'Naka-on',
       vibrationOff: 'Naka-off',
@@ -1136,6 +1152,19 @@ const { useState, useEffect, useRef, useCallback } = (() => {
 
     const soundOptions = ['siren','bell','digital'];
     const settingsBody = `
+      <div class="settings-panel-row">
+        <span style="flex:1;">${t('settingsLangLabel')}</span>
+        ${renderLangSelect('headerLangSelect')}
+      </div>
+
+      <div class="settings-panel-row">
+        <span style="flex:1;">${t('settingsThemeLabel')}</span>
+        <div class="theme-switch">
+          <button class="theme-btn ${state.theme==='dark'?'active':''}" id="themeDark" title="Dark mode" aria-label="다크 모드로 전환" aria-pressed="${state.theme==='dark'}">🌙</button>
+          <button class="theme-btn ${state.theme==='light'?'active':''}" id="themeLight" title="Light mode" aria-label="라이트 모드로 전환" aria-pressed="${state.theme==='light'}">☀️</button>
+        </div>
+      </div>
+
       <div class="settings-panel-row">
         <span>${t('settingsVibrationLabel')}</span>
         <button class="ghost" id="helpToggleVibration" style="font-size:12px;">${state.vibrationEnabled ? t('vibrationOn') : t('vibrationOff')}</button>
@@ -1302,14 +1331,6 @@ const { useState, useEffect, useRef, useCallback } = (() => {
           <div class="tag">${t('tag')}</div>
           <h1>${t('title')}</h1>
           <p class="one-liner">${t('oneLiner')}</p>
-          <div class="lang-switch">
-            ${renderLangSelect('headerLangSelect')}
-            <span style="width:6px;"></span>
-            <div class="theme-switch">
-              <button class="theme-btn ${state.theme==='dark'?'active':''}" id="themeDark" title="Dark mode" aria-label="다크 모드로 전환" aria-pressed="${state.theme==='dark'}">🌙</button>
-              <button class="theme-btn ${state.theme==='light'?'active':''}" id="themeLight" title="Light mode" aria-label="라이트 모드로 전환" aria-pressed="${state.theme==='light'}">☀️</button>
-            </div>
-          </div>
         </div>
         <div class="status-line">
           <div id="clockDisplay" class="clock-display"></div>
