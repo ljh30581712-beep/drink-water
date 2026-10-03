@@ -322,6 +322,11 @@ const { useState, useEffect, useRef, useCallback } = (() => {
     goalMl: 3500,
     windowHours: 9,
     perDrinkMl: 200,
+    // "타이머 시간 설정이 어렵다"는 실사용자 피드백(설문 #23)을 반영해 추가한 간단 설정 모드.
+    // 기본값은 간단 모드(true) — 목표량·근무시간 대신 "몇 분마다 마실지"만 직접 입력하면 된다.
+    // 끄면 기존처럼 목표량·근무시간 기반 자동 계산 방식(고급 설정)을 그대로 쓸 수 있다.
+    simpleMode: true,
+    customIntervalMin: 30,
     running: false,
     remainingSec: null,
     intervalId: null,
@@ -383,6 +388,9 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       labelGoal: '목표(ml/일)',
       labelWindow: '근무시간(h)',
       labelDrink: '1회 섭취(ml)',
+      labelInterval: '간격(분)',
+      switchToAdvanced: '고급 설정',
+      switchToSimple: '간단 설정',
       derived: (min, ml, count)=>`약 ${min}분마다 ${ml}ml씩, 하루 총 ${count}회 섭취`,
       footnote: '성인 하루 권장 수분량 2.5L 기준, 육체노동이나 보호장비 착용으로 땀을 많이 흘리는 산업 현장 근로자는 유산소 운동 1시간 수준의 발한이 있다고 가정해 3.5L로 상향했습니다.<br>촬영 영상은 프레임 1장만 AI 판별에 사용되며 서버에 저장되지 않습니다.',
       modalTitle: '음수 인증 촬영',
@@ -478,6 +486,9 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       labelGoal: 'Goal (ml/day)',
       labelWindow: 'Shift (h)',
       labelDrink: 'Per drink (ml)',
+      labelInterval: 'Interval (min)',
+      switchToAdvanced: 'Advanced',
+      switchToSimple: 'Simple',
       derived: (min, ml, count)=>`About ${ml}ml every ${min}min, ${count} times/day total`,
       footnote: 'Based on the recommended 2.5L daily intake for adults, raised to 3.5L assuming industrial workers doing physical labor or wearing protective gear sweat roughly as much as an hour of aerobic exercise.<br>Only a single frame is used for AI verification and is not stored on any server.',
       modalTitle: 'Drink Verification',
@@ -573,6 +584,9 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       labelGoal: '目標(ml/日)',
       labelWindow: '勤務時間(h)',
       labelDrink: '1回摂取量(ml)',
+      labelInterval: '間隔(分)',
+      switchToAdvanced: '詳細設定',
+      switchToSimple: '簡単設定',
       derived: (min, ml, count)=>`約${min}分ごとに${ml}mlずつ、1日合計${count}回摂取`,
       footnote: '成人の1日推奨水分摂取量2.5Lを基準に、肉体労働や保護具の着用で発汗量が多い産業現場の労働者は有酸素運動1時間相当の発汗があると想定し3.5Lに引き上げました。<br>撮影映像はAI判定のため1フレームのみ使用され、サーバーには保存されません。',
       modalTitle: '飲水認証撮影',
@@ -668,6 +682,9 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       labelGoal: '目标(ml/天)',
       labelWindow: '工作时长(小时)',
       labelDrink: '单次饮水量(ml)',
+      labelInterval: '间隔(分钟)',
+      switchToAdvanced: '高级设置',
+      switchToSimple: '简单设置',
       derived: (min, ml, count)=>`大约每 ${min} 分钟饮水 ${ml}ml，全天共 ${count} 次`,
       footnote: '以成人每日推荐饮水量2.5L为基准，考虑到从事体力劳动或穿戴防护装备的产业现场员工出汗量相当于1小时有氧运动，将标准上调至3.5L。<br>拍摄的视频仅使用1帧画面用于AI判断，不会保存在服务器中。',
       modalTitle: '饮水认证拍摄',
@@ -763,6 +780,9 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       labelGoal: 'Mục tiêu (ml/ngày)',
       labelWindow: 'Giờ làm việc (giờ)',
       labelDrink: 'Lượng uống mỗi lần (ml)',
+      labelInterval: 'Khoảng cách (phút)',
+      switchToAdvanced: 'Nâng cao',
+      switchToSimple: 'Đơn giản',
       derived: (min, ml, count)=>`Khoảng ${min} phút uống ${ml}ml, tổng cộng ${count} lần mỗi ngày`,
       footnote: 'Dựa trên lượng nước khuyến nghị 2.5L/ngày cho người lớn, đã tăng lên 3.5L vì người lao động làm việc chân tay hoặc mặc đồ bảo hộ tại các cơ sở công nghiệp có mức độ đổ mồ hôi tương đương 1 giờ vận động.<br>Chỉ 1 khung hình từ video được dùng để AI phân tích và không được lưu trên máy chủ.',
       modalTitle: 'Chụp ảnh xác nhận uống nước',
@@ -858,6 +878,9 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       labelGoal: 'เป้าหมาย (มล./วัน)',
       labelWindow: 'ชั่วโมงทำงาน (ชม.)',
       labelDrink: 'ปริมาณต่อครั้ง (มล.)',
+      labelInterval: 'ช่วงเวลา (นาที)',
+      switchToAdvanced: 'ตั้งค่าขั้นสูง',
+      switchToSimple: 'ตั้งค่าแบบง่าย',
       derived: (min, ml, count)=>`ประมาณทุก ${min} นาที ดื่ม ${ml} มล. รวมวันละ ${count} ครั้ง`,
       footnote: 'อ้างอิงปริมาณน้ำที่แนะนำต่อวันสำหรับผู้ใหญ่ 2.5 ลิตร และปรับเพิ่มเป็น 3.5 ลิตร เนื่องจากพนักงานที่ใช้แรงงานหรือสวมอุปกรณ์ป้องกันในภาคอุตสาหกรรมมีเหงื่อออกเทียบเท่าการออกกำลังกาย 1 ชั่วโมง<br>ใช้เพียง 1 เฟรมจากวิดีโอเพื่อการวิเคราะห์ด้วย AI เท่านั้น และจะไม่ถูกบันทึกไว้บนเซิร์ฟเวอร์',
       modalTitle: 'ถ่ายภาพยืนยันการดื่มน้ำ',
@@ -953,6 +976,9 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       labelGoal: 'Target (ml/hari)',
       labelWindow: 'Jam Kerja (jam)',
       labelDrink: 'Jumlah per Minum (ml)',
+      labelInterval: 'Interval (menit)',
+      switchToAdvanced: 'Lanjutan',
+      switchToSimple: 'Sederhana',
       derived: (min, ml, count)=>`Sekitar setiap ${min} menit minum ${ml}ml, total ${count} kali sehari`,
       footnote: 'Berdasarkan asupan air harian yang disarankan untuk orang dewasa 2,5L, dinaikkan menjadi 3,5L karena pekerja industri yang bekerja secara fisik atau mengenakan alat pelindung diasumsikan berkeringat setara dengan olahraga aerobik 1 jam.<br>Hanya 1 frame dari video yang digunakan untuk analisis AI dan tidak disimpan di server.',
       modalTitle: 'Foto Verifikasi Minum Air',
@@ -1048,6 +1074,9 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       labelGoal: 'Target (ml/araw)',
       labelWindow: 'Oras ng Trabaho (oras)',
       labelDrink: 'Dami bawat inom (ml)',
+      labelInterval: 'Agwat (minuto)',
+      switchToAdvanced: 'Advanced',
+      switchToSimple: 'Simple',
       derived: (min, ml, count)=>`Humigit-kumulang bawat ${min} minuto, ${ml}ml, kabuuang ${count} beses sa isang araw`,
       footnote: 'Batay sa inirerekomendang 2.5L na tubig kada araw para sa mga adulto, itinaas sa 3.5L dahil ang mga manggagawang pisikal ang trabaho o naka-protective gear sa industriya ay ipinapalagay na nagpapawis nang katumbas ng 1 oras na aerobic exercise.<br>Isang frame lamang mula sa video ang ginagamit para sa AI analysis at hindi ito nase-save sa server.',
       modalTitle: 'Kuhanan ng Larawan sa Pag-inom',
@@ -1280,7 +1309,11 @@ const { useState, useEffect, useRef, useCallback } = (() => {
   }
 
   function intervalMinutes(){
-    // 간격을 5분 단위로 깔끔하게 반올림 ("31분" 같은 어색한 숫자 방지)
+    if(state.simpleMode){
+      // 간단 모드: 사용자가 직접 입력한 간격을 그대로 사용 (5분 단위로만 보정)
+      return Math.max(5, Math.round(state.customIntervalMin / 5) * 5);
+    }
+    // 고급 모드: 목표 섭취량·근무시간으로부터 간격을 역산, 5분 단위로 깔끔하게 반올림
     const drinksNeeded = Math.max(1, state.goalMl / state.perDrinkMl);
     const windowMin = state.windowHours * 60;
     const rawInterval = windowMin / drinksNeeded;
@@ -1406,7 +1439,22 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       </div>
 
       <div class="panel">
-        <h2>${t('settingsTitle')}</h2>
+        <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h2 style="margin:0;">${t('settingsTitle')}</h2>
+          <button class="ghost" id="btnToggleSimpleMode" style="font-size:11px; padding:5px 10px;">${state.simpleMode ? t('switchToAdvanced') : t('switchToSimple')}</button>
+        </div>
+        ${state.simpleMode ? `
+        <div class="settings-grid">
+          <div class="field">
+            <label>${t('labelInterval')}</label>
+            <input type="number" id="inInterval" value="${state.customIntervalMin}" step="5" min="5">
+          </div>
+          <div class="field">
+            <label>${t('labelDrink')}</label>
+            <input type="number" id="inDrink" value="${state.perDrinkMl}" step="50">
+          </div>
+        </div>
+        ` : `
         <div class="settings-grid">
           <div class="field">
             <label>${t('labelGoal')}</label>
@@ -1421,6 +1469,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
             <input type="number" id="inDrink" value="${state.perDrinkMl}" step="50">
           </div>
         </div>
+        `}
         <div class="derived">${t('derived', intervalMinutes(), state.perDrinkMl, drinkCount())}</div>
         <div class="row" style="margin-top:10px;">
           <button class="ghost full" id="btnResetToday" style="font-size:12px;">${t('btnResetToday')}</button>
@@ -1546,6 +1595,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
     if($('inGoal')) $('inGoal').onchange = e => { state.goalMl = Math.max(500, +e.target.value||3500); normalizeGoal(); render(); };
     if($('inWindow')) $('inWindow').onchange = e => { state.windowHours = Math.max(1, +e.target.value||9); normalizeGoal(); render(); };
     if($('inDrink')) $('inDrink').onchange = e => { state.perDrinkMl = Math.max(50, +e.target.value||200); normalizeGoal(); render(); };
+    if($('inInterval')) $('inInterval').onchange = e => { state.customIntervalMin = Math.max(5, +e.target.value||30); normalizeGoal(); render(); };
+    if($('btnToggleSimpleMode')) $('btnToggleSimpleMode').onclick = () => { state.simpleMode = !state.simpleMode; normalizeGoal(); render(); };
 
     if($('btnStart')) $('btnStart').onclick = () => startTimer(intervalMin);
     if($('btnStop')) $('btnStop').onclick = stopTimer;
@@ -1911,6 +1962,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
         vibrationEnabled: state.vibrationEnabled,
         alarmSound: state.alarmSound,
         dayStartHour: state.dayStartHour,
+        simpleMode: state.simpleMode,
+        customIntervalMin: state.customIntervalMin,
       }));
     }catch(e){ /* 저장소 사용 불가 환경 - 조용히 무시 */ }
   }
@@ -1927,6 +1980,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       state.vibrationEnabled = saved.vibrationEnabled ?? state.vibrationEnabled;
       state.alarmSound = saved.alarmSound ?? state.alarmSound;
       state.dayStartHour = saved.dayStartHour ?? state.dayStartHour;
+      state.simpleMode = saved.simpleMode ?? state.simpleMode;
+      state.customIntervalMin = saved.customIntervalMin ?? state.customIntervalMin;
       if(saved.date === getLogicalDay().toDateString()){
         // 같은 논리적 하루(dayStartHour 기준)면 오늘 기록도 그대로 복원
         state.consumedMl = saved.consumedMl ?? 0;
@@ -1978,6 +2033,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
         lang: state.lang, theme: state.theme, updatedAt: new Date().toISOString(),
         vibrationEnabled: state.vibrationEnabled, alarmSound: state.alarmSound,
         dayStartHour: state.dayStartHour,
+        simpleMode: state.simpleMode, customIntervalMin: state.customIntervalMin,
       }, { merge: true });
       await db.collection('users').doc(uid).collection('days').doc(dateKey()).set({
         date: dateKey(), consumedMl: state.consumedMl, log: state.log,
@@ -2005,6 +2061,8 @@ const { useState, useEffect, useRef, useCallback } = (() => {
         state.vibrationEnabled = d.vibrationEnabled ?? state.vibrationEnabled;
         state.alarmSound = d.alarmSound ?? state.alarmSound;
         state.dayStartHour = d.dayStartHour ?? state.dayStartHour;
+        state.simpleMode = d.simpleMode ?? state.simpleMode;
+        state.customIntervalMin = d.customIntervalMin ?? state.customIntervalMin;
         normalizeGoal();
       }
       const dayDoc = await db.collection('users').doc(uid).collection('days').doc(dateKey()).get();
