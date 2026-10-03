@@ -142,6 +142,9 @@ vercel dev
 
 ## 9. Future Roadmap
 
+The items below are not yet implemented and are planned for development during the 8-week coaching period.
+
+- **Expansion into a heat-illness prevention safety system (long-term vision)**: Based on feedback from an outside expert with industrial-site experience. Today the app only confirms "did you drink water," but the long-term direction is to assess a risk level (normal/caution/warning/danger) from temperature, humidity, perceived temperature, work intensity, protective-gear use, and continuous work duration, then connect that risk level not just to hydration prompts but also to rest guidance, an "I feel unwell" symptom report, and manager alerts. The overall flow would become "check work environment → assess risk level → guide hydration & rest → report abnormal symptoms → manager review," with AI hydration verification repositioned as one core feature within that larger framework. This is too large to build fresh within the current 8-week coaching period, so for this competition we're focused on thoroughly validating the one core action (AI hydration verification) and leaving this vision for future work.
 - **Dual alarm structure**: A second alarm timed to work-area exit windows
 - **Automatic shift-pattern adjustment**: Automatically adjust the alarm interval based on work shifts
 - **QR entry/exit tagging**: A QR code posted at the worksite entrance lets workers scan it on exit, automatically logging the exit time and using it to fine-tune alarm timing (AI photo verification remains the sole method of hydration verification — QR only serves the supporting role of "detecting exit time")
