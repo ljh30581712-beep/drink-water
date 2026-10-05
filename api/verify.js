@@ -1,5 +1,5 @@
 // api/verify.js
-// 이 파일은 서버(Vercel)에서만 실행됩니다.  브라우저는 절대 이 코드를 직접 볼 수 없고,
+// 이 파일은 서버(Vercel)에서만 실행됩니다. 브라우저는 절대 이 코드를 직접 볼 수 없고,
 // API 키도 여기 환경변수로만 존재하므로 안전합니다.
 
 export default async function handler(req, res) {
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
   const PRIMARY_MODEL = 'gemini-3.5-flash';       // 우선 시도할 모델 (더 정교함)
   const FALLBACK_MODEL = 'gemini-3.5-flash-lite'; // 실패 시 1회만 대체 시도할 모델 (같은 구글 서비스라 추가 비용 없음)
   const urlFor = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const requestBody = JSON.stringify({
+  const baseBody = {
     contents: [
       {
         parts: [
@@ -54,38 +54,71 @@ export default async function handler(req, res) {
         ],
       },
     ],
+  };
+  // 사진 한 장 판별은 깊은 추론이 필요 없다. 추론(thinking) 시간을 줄여 응답을 빠르게 한다.
+  // (모델이 이 옵션을 지원하지 않아 400이 나오면 아래 시도 목록의 마지막 줄이 옵션 없이 다시 시도한다.)
+  const fastBody = JSON.stringify({
+    ...baseBody,
+    generationConfig: { thinkingConfig: { thinkingLevel: 'low' } },
   });
+  const plainBody = JSON.stringify(baseBody);
 
-  async function callGemini(model) {
-    return fetch(urlFor(model), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: requestBody,
-    });
+  // 이전에는 첫 모델이 오래 걸리면 함수 제한시간(vercel.json의 maxDuration)이 먼저 끝나서
+  // 대체 모델은 시도조차 못 하고 504(시간초과)가 났다. 호출 1건마다 따로 제한시간을 두고,
+  // 늦으면 바로 끊고 다음 시도로 넘어가도록 바꿨다.
+  const TOTAL_BUDGET_MS = 50000;   // 전체 상한 (maxDuration 60초보다 여유 있게)
+  const PER_CALL_MS = 18000;       // 호출 1건 상한
+  const startedAt = Date.now();
+
+  async function callGemini(model, body) {
+    const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt);
+    if (remaining < 3000) throw new Error('BUDGET_EXHAUSTED');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(PER_CALL_MS, remaining));
+    try {
+      return await fetch(urlFor(model), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  // gemini-3.5-flash로 먼저 시도하고, 실패하면(혼잡 등) 딱 1번만
-  // gemini-3.5-flash-lite로 대체 시도한다. 같은 구글 계정/무료 사용량 안에서
-  // 모델만 바꾸는 것이라 추가 비용이 들지 않는다.
-  try {
-    let response = await callGemini(PRIMARY_MODEL);
-    let lastErrText = '';
+  const attempts = [
+    { model: PRIMARY_MODEL, body: fastBody },
+    { model: FALLBACK_MODEL, body: fastBody },
+    { model: FALLBACK_MODEL, body: plainBody },
+  ];
 
-    if (!response.ok) {
-      lastErrText = await response.text();
-      console.warn(`Gemini(${PRIMARY_MODEL}) 실패 - ${FALLBACK_MODEL}로 대체 시도`, response.status);
-      response = await callGemini(FALLBACK_MODEL);
-      if (!response.ok) {
-        lastErrText = await response.text();
+  try {
+    let response = null;
+    let lastErrText = '';
+    let timedOut = false;
+
+    for (const a of attempts) {
+      try {
+        const r = await callGemini(a.model, a.body);
+        if (r.ok) { response = r; break; }
+        lastErrText = await r.text();
+        console.warn(`Gemini(${a.model}) 실패`, r.status, lastErrText.slice(0, 200));
+        response = r; // 마지막 실패 응답을 기억해 둔다
+      } catch (e) {
+        timedOut = true;
+        console.warn(`Gemini(${a.model}) 시간초과 또는 연결 오류`, e && e.name);
+        response = null;
+        if (e && e.message === 'BUDGET_EXHAUSTED') break;
       }
     }
 
-    if (!response.ok) {
-      console.error('Gemini API 오류 상세:', response.status, lastErrText);
-      return res.status(response.status).json({ error: 'AI_API_ERROR' });
+    if (!response || !response.ok) {
+      if (!response && timedOut) {
+        return res.status(504).json({ error: 'AI_TIMEOUT' });
+      }
+      console.error('Gemini API 오류 상세:', response && response.status, lastErrText);
+      return res.status((response && response.status) || 502).json({ error: 'AI_API_ERROR' });
     }
 
     const data = await response.json();
