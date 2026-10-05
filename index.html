@@ -1639,14 +1639,18 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       if(state.remainingSec <= 0){
         clearInterval(state.intervalId);
         triggerAlarm();
-      } else if(!state.helpOpen){
-        // 설정/FAQ 패널이 열려있는 동안은 화면 전체를 다시 그리지 않는다.
-        // render()는 appEl.innerHTML 전체를 교체하기 때문에, 패널이 열린 채로 1초마다
-        // 다시 그려지면 그 안의 입력란(목표량 등)도 매초 파괴·재생성되어 타이핑 중
-        // 포커스가 끊기고 글자가 제대로 안 쳐지는 버그가 있었다. 카운트다운 숫자는
-        // 어차피 패널에 가려 안 보이므로, 패널이 열린 동안은 render를 건너뛰어도
-        // 시간 계산 자체(state.remainingSec)는 계속 정확하게 진행된다.
-        render();
+      } else {
+        // render()는 appEl.innerHTML 전체를 교체하기 때문에, 타이머가 도는 동안 1초마다
+        // 다시 그려지면 메인 화면의 설정 입력칸(간격·1회 섭취량·목표량·근무시간)도 매초
+        // 파괴·재생성되어 타이핑 중 포커스가 끊기고 글자가 제대로 안 쳐지는 버그가 있었다.
+        // 따라서 (1) 도움말 패널이 열려 있거나 (2) 입력칸/선택창에 커서가 있는 동안은
+        // 화면을 다시 그리지 않는다. 시간 계산(state.remainingSec)은 계속 정확히 진행되고,
+        // 입력을 마치면(blur → onchange) 바로 한 번 다시 그려져 화면이 따라잡는다.
+        const ae = document.activeElement;
+        const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA');
+        if(!state.helpOpen && !typing){
+          render();
+        }
       }
     }, 1000);
   }
@@ -1798,6 +1802,56 @@ const { useState, useEffect, useRef, useCallback } = (() => {
     if(navigator.vibrate) navigator.vibrate(0);
   }
 
+  // ---------- 지표 계측 (W6): 방문 / 시작 / 완료 / 재방문 ----------
+  // 개인정보 없이 "무작위 익명 ID + 이벤트 종류 + 날짜"만 Firestore의 events 컬렉션에 쌓는다.
+  // 이름·이메일·사진은 절대 보내지 않는다. 집계는 stats.html(소유자 로그인 전용)에서 한다.
+  // 팀원·심사용 접속은 internal=true 로 표시해서 집계에서 제외한다 (?judge=1 또는 ?internal=1 접속 시).
+  function kstDay(d){
+    return new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit' }).format(d || new Date());
+  }
+  function getAnonId(){
+    try{
+      let id = localStorage.getItem('wc_anon');
+      if(!id){
+        id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+        localStorage.setItem('wc_anon', id);
+      }
+      return id;
+    }catch(e){ return 'no-storage'; }
+  }
+  function isInternalUser(){
+    try{
+      if(new URLSearchParams(location.search).get('internal') === '1') localStorage.setItem('wc_internal', '1');
+      return state.isJudgeMode || localStorage.getItem('wc_internal') === '1';
+    }catch(e){ return !!state.isJudgeMode; }
+  }
+  function trackEvent(type){
+    try{
+      if(!firebaseReady) return;
+      firebase.firestore().collection('events').add({
+        anonId: getAnonId(),
+        type: type,                       // 'visit' | 'start' | 'complete' | 'return'
+        day: kstDay(),                    // 'YYYY-MM-DD' (한국 시간)
+        internal: isInternalUser(),
+        lang: state.lang,
+        ts: firebase.firestore.FieldValue.serverTimestamp(),
+      }).catch(()=>{ /* 계측 실패는 앱 동작에 영향 없음 */ });
+    }catch(e){ /* 무시 */ }
+  }
+  function trackVisitAndReturn(){
+    trackEvent('visit');                  // 링크를 열었다
+    try{
+      const today = kstDay();
+      const first = localStorage.getItem('wc_first_day');
+      if(!first){ localStorage.setItem('wc_first_day', today); return; }
+      // 첫 방문 날짜와 다른 날에 다시 열었고, 오늘 아직 재방문을 기록하지 않았다면 1회 기록
+      if(first !== today && localStorage.getItem('wc_return_logged') !== today){
+        localStorage.setItem('wc_return_logged', today);
+        trackEvent('return');
+      }
+    }catch(e){}
+  }
+
   // ---------- OGQ 스티커 (보너스 기능) ----------
   // 촬영 완료 후가 아니라 카메라를 여는 시점에 미리 불러와둬서, 인증 성공 순간 지연 없이 바로 보여준다.
   // 실패해도 조용히 무시 - 음수 인증이라는 핵심 기능엔 전혀 영향 없음.
@@ -1815,6 +1869,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
 
   // ---------- camera ----------
   async function openCamera(){
+    trackEvent('start');                 // 핵심 행동 시작(촬영 시도)
     state.camOpen = true;
     state.verdict = null;
     render();
@@ -1896,6 +1951,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       if(!isYes) state.failCount += 1; // 실제 AI 판별 실패만 통계에 반영 (네트워크 오류는 미포함)
 
       state.verdict = isYes ? 'yes' : 'no';
+      if(isYes) trackEvent('complete');   // 핵심 행동 완료(AI 인증 성공)
       state.verdictReason = reason;
       render();
       if(isYes){
@@ -2140,6 +2196,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
 
   loadPersisted();
   normalizeGoal();
+  trackVisitAndReturn();
   render();
   updateClock();
 })();
