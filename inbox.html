@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Water-Cycle · 건의함 (소유자 전용)</title>
+<style>
+  :root{ --teal:#0E9C8C; --navy:#0D1319; --panel:#141C24; --panel2:#1A232C; --line:#2A3540; --text:#E7EEF2; --dim:#8FA3AE; --amber:#FFB627; --red:#F87171; --blue:#60A5FA; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--navy); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',sans-serif; padding:24px 16px; }
+  .wrap{ max-width:720px; margin:0 auto; }
+  h1{ font-size:20px; margin:0 0 4px; }
+  .sub{ color:var(--dim); font-size:13px; margin-bottom:16px; line-height:1.6; }
+  button{ background:var(--teal); color:#06231f; border:0; border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer; font-size:14px; }
+  button.ghost{ background:var(--panel2); color:var(--text); border:1px solid var(--line); }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+  .err{ color:var(--red); font-size:13px; margin-top:8px; line-height:1.5; }
+  .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .chip{ padding:7px 12px; font-size:13px; border-radius:999px; }
+  .chip.on{ background:var(--teal); color:#06231f; border-color:var(--teal); }
+  .meta{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--dim); margin-bottom:8px; }
+  .tag{ font-weight:700; padding:2px 8px; border-radius:999px; font-size:11px; }
+  .tag.error{ background:rgba(248,113,113,.15); color:var(--red); }
+  .tag.idea{ background:rgba(14,156,140,.18); color:var(--teal); }
+  .tag.etc{ background:rgba(143,163,174,.18); color:var(--dim); }
+  .msg{ white-space:pre-wrap; word-break:break-word; font-size:15px; line-height:1.6; }
+  .ae{ margin-top:8px; font-size:12px; color:var(--amber); }
+  .count{ color:var(--dim); font-size:13px; margin-left:auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💬 Water-Cycle 건의함</h1>
+  <div class="sub">앱에서 접수된 오류·건의 제보를 모아 봅니다. 소유자 구글 계정으로 로그인해야 보입니다.</div>
+
+  <div id="loginBox" class="card">
+    <button id="btnLogin">Google 로그인</button>
+    <div id="msg" class="err"></div>
+  </div>
+
+  <div id="box" style="display:none;">
+    <div class="bar">
+      <button class="ghost chip on" data-k="all">전체</button>
+      <button class="ghost chip" data-k="error">오류</button>
+      <button class="ghost chip" data-k="idea">건의</button>
+      <button class="ghost chip" data-k="etc">기타</button>
+      <span class="count" id="count"></span>
+    </div>
+    <div id="list"></div>
+    <button class="ghost" id="btnReload">새로고침</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDi0OOVgGxItHEGATw1qgOvU10y5wxzyjU",
+  authDomain: "water-cycle-381dd.firebaseapp.com",
+  projectId: "water-cycle-381dd",
+  storageBucket: "water-cycle-381dd.firebasestorage.app",
+  messagingSenderId: "500263893719",
+  appId: "1:500263893719:web:f66bea58fc8f965aaece92",
+};
+firebase.initializeApp(firebaseConfig);
+const $ = id => document.getElementById(id);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const kindLabel = { error:'오류', idea:'건의', etc:'기타' };
+const fmt = t => t ? new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(t) : '-';
+let items = [], filter = 'all';
+
+$('btnLogin').onclick = async () => {
+  try{ await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+  catch(e){ $('msg').textContent = '로그인 실패: ' + e.message; }
+};
+$('btnReload').onclick = load;
+document.querySelectorAll('.chip').forEach(b => b.onclick = () => {
+  filter = b.dataset.k;
+  document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b));
+  draw();
+});
+firebase.auth().onAuthStateChanged(u => { if(u){ $('loginBox').style.display='none'; $('box').style.display='block'; load(); } });
+
+async function load(){
+  $('msg').textContent = '';
+  try{
+    const snap = await firebase.firestore().collection('feedback').get();
+    items = snap.docs.map(d => d.data()).sort((a,b) => ((b.ts&&b.ts.toMillis)?b.ts.toMillis():0) - ((a.ts&&a.ts.toMillis)?a.ts.toMillis():0));
+    draw();
+  }catch(e){
+    $('box').style.display='none'; $('loginBox').style.display='block';
+    $('msg').textContent = (e.code === 'permission-denied' ? '권한이 없습니다. 소유자 구글 계정으로 로그인했는지, Firestore 규칙이 게시됐는지 확인하세요.' : '불러오지 못했습니다.') + ' [' + e.code + ']';
+  }
+}
+function draw(){
+  const rows = items.filter(f => filter === 'all' || f.kind === filter);
+  $('count').textContent = '총 ' + rows.length + '건 (최신순)';
+  $('list').innerHTML = rows.length ? rows.map(f => `
+    <div class="card">
+      <div class="meta">
+        <span class="tag ${esc(f.kind)}">${esc(kindLabel[f.kind] || f.kind)}</span>
+        <span>${fmt(f.ts && f.ts.toDate ? f.ts.toDate() : null)}</span>
+        <span>· ${esc(f.lang || '')}</span>
+        <span>· ID ${esc(String(f.anonId || '').slice(0,6))}</span>
+      </div>
+      <div class="msg">${esc(f.message)}</div>
+      ${f.lastError ? `<div class="ae">최근 AI 오류: ${esc(f.lastError)}</div>` : ''}
+    </div>`).join('') : '<div class="card" style="color:var(--dim)">접수된 제보가 없습니다.</div>';
+}
+</script>
+</body>
+</html>
