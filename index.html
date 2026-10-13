@@ -1816,7 +1816,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
   // ---------- push (화면이 꺼져도 울리는 알림) ----------
   // 폰은 화면이 꺼지면 웹페이지를 멈추므로, 서버가 알람 시각에 푸시를 보내 시스템 알림으로 띄운다.
   // Firebase 콘솔 → 프로젝트 설정 → 클라우드 메시징 → 웹 푸시 인증서에서 만든 "키 쌍"을 아래에 붙여 넣는다.
-  const VAPID_KEY = 'PASTE_YOUR_VAPID_KEY_HERE';
+  const VAPID_KEY = 'BN9ctdQPt8hW4t4mORYfL1lQmn3wnuv5koJfVW7MZBp13qCqa8-qFZdyGY6390YAl0JDP76G3ysQNImzFrBev34';
   let pushToken = null;
   let pushMessaging = null;
   function pushSupported(){
