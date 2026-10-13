@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/verify.js": { "memory": 512, "maxDuration": 15 },
+    "api/verify.js": { "memory": 512, "maxDuration": 60 },
     "api/push.js": { "memory": 256, "maxDuration": 15 }
   }
 }
