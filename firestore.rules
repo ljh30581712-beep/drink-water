@@ -1,0 +1,46 @@
+rules_version = '2';
+// Water-Cycle Firestore 보안 규칙 (Firebase 콘솔 → Firestore → 규칙 에 게시된 내용과 동일)
+// - users   : 로그인한 본인만 자기 기록 읽기/쓰기
+// - events  : 누구나 정해진 형식의 익명 이벤트 "생성"만 가능, 읽기는 소유자 계정만
+// - feedback: 누구나 정해진 형식의 제보 "생성"만 가능, 읽기는 소유자 계정만
+// - pushJobs: 규칙에 없음 → 클라이언트 접근 전부 차단 (서버 api/push.js가 Admin SDK로만 접근)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /events/{eventId} {
+      allow create: if request.resource.data.keys().hasOnly(['anonId','type','day','internal','lang','detail','ts'])
+                    && request.resource.data.type in ['visit','start','complete','return','error']
+                    && request.resource.data.anonId is string
+                    && request.resource.data.anonId.size() <= 64
+                    && request.resource.data.day is string
+                    && request.resource.data.day.size() == 10
+                    && (!('detail' in request.resource.data) || (request.resource.data.detail is string && request.resource.data.detail.size() <= 100))
+                    && request.resource.data.ts == request.time;
+      allow read: if request.auth != null
+                  && request.auth.token.email == 'ljh30581712@gmail.com';
+      allow update, delete: if false;
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if request.resource.data.keys().hasOnly(['anonId','kind','message','lastError','day','lang','ts'])
+                    && request.resource.data.kind in ['error','idea','etc']
+                    && request.resource.data.anonId is string
+                    && request.resource.data.anonId.size() <= 64
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() > 0
+                    && request.resource.data.message.size() <= 1000
+                    && request.resource.data.lastError is string
+                    && request.resource.data.lastError.size() <= 200
+                    && request.resource.data.day is string
+                    && request.resource.data.day.size() == 10
+                    && request.resource.data.ts == request.time;
+      allow read: if request.auth != null
+                  && request.auth.token.email == 'ljh30581712@gmail.com';
+      allow update, delete: if false;
+    }
+  }
+}
