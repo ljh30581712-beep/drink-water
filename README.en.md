@@ -21,8 +21,8 @@
 > ### 📌 TL;DR
 > - **What**: A web app that solves the problem of industrial workers missing their moment to drink water — the alarm only turns off after AI verifies, from a photo, that the user is actually drinking.
 > - **Why AI**: A button click or a QR scan cannot prove someone really drank. AI Vision verification is the only way to confirm.
-> - **Status**: Live in production, 8 languages, cloud sync on login, in-app measurement and bug/suggestion reporting all implemented.
-> - **Measured results**: 12 visitors → 7 started → 7 completed → 3 returned / 7 users verified successfully in the last 7 days (North Star), per the owner-only dashboard (see "14. Measurement & Improvement").
+> - **Status**: Live in production, 8 languages, cloud sync on login, in-app measurement, bug/suggestion reporting and push alerts that work with the screen off all implemented.
+> - **Measured results**: 33 visitors → 15 started → 15 completed → 7 returned / 13 users verified successfully in the last 7 days (North Star, goal 10), per the owner-only dashboard (see "14. Measurement & Improvement").
 
 ---
 
@@ -70,11 +70,14 @@ graph TD
     B -->|"Send image + prompt"| C
     C -->|"Return result (JSON)"| A
     A -.->|"Sync records when logged in (optional)"| D
+    E["<b>Firebase Cloud Messaging + push server</b><br/>(api/push.js, 1-minute scheduler)<br/>Sends a push at alarm time<br/>even when the screen is off"]
+    A -.->|"Opted-in device: schedule alarm time"| E
 ```
 
 - Captured images are discarded right after verification and are not stored on any server or database.
 - **Every feature works without logging in.** Today's records, statistics and settings are kept in browser storage and survive reloads.
 - **When logged in with a Google account**, the same records are stored in Firestore (cloud), persist across devices and browser resets, and the last 14 days can be viewed separately.
+- **Alerts when the screen is off (optional)**: Phones pause web pages when the screen turns off, so when a user turns alerts on, the alarm time is scheduled on the server (`api/push.js`) at timer start, and a 1-minute scheduler (cron-job.org) triggers a Firebase Cloud Messaging push for due alarms. It repeats every minute, up to 5 times, until verification.
 
 ## 4. Tech Stack
 
@@ -85,6 +88,7 @@ graph TD
 | AI model | Google Gemini — `gemini-3.5-flash` (primary) / `gemini-3.5-flash-lite` (automatic fallback) — Vision API |
 | Login · cloud storage | Firebase Authentication (Google login), Cloud Firestore |
 | Measurement · reports | Firestore `events` (anonymous events) · `feedback` (inbox), Web3Forms (report e-mail delivery) |
+| Push notifications | Firebase Cloud Messaging (web push), service worker, Firebase Admin SDK (`api/push.js`), cron-job.org (1-minute scheduler) |
 | Bonus | OGQ Market API — sticker reward on successful verification (`api/sticker.js`) |
 | Deployment | Vercel |
 | Version control | GitHub |
@@ -98,8 +102,8 @@ Open the [live demo](https://drink-water-five-drab.vercel.app/) → press **"⚡
 
 ### Run locally
 ```bash
-git clone <this repository URL>
-cd water-cycle
+git clone https://github.com/ljh30581712-beep/drink-water.git
+cd drink-water
 npm i -g vercel
 vercel dev
 # Register these environment variables before running:
@@ -111,11 +115,12 @@ vercel dev
 
 ### Deploy
 1. Import the GitHub repository into Vercel
-2. In Vercel Project Settings → Environment Variables, add `GEMINI_API_KEY` (required) and `OGQ_API_KEY` (optional)
+2. In Vercel Project Settings → Environment Variables, add `GEMINI_API_KEY` (required) and `OGQ_API_KEY` (optional). For push notifications, also add `FIREBASE_SERVICE_ACCOUNT` (Firebase service account JSON) and `CRON_SECRET` (any random string)
 3. Deploy
 4. (Optional) Enable Authentication (Google login) and Firestore in the Firebase console, and add the deployed domain to "Authorized domains"
 5. (Optional) Publish the Firestore rules (`firestore.rules`): `events` and `feedback` are write-only; reading is limited to the owner account
 6. (Optional) Report e-mail: enter the Access Key from web3forms.com into `EMAIL_FORM_KEY` in `index.html`
+7. (Optional) Push notifications: in Firebase console → Cloud Messaging, create a Web Push certificate (VAPID key) and put it in `VAPID_KEY` in `index.html`, then register an external scheduler such as cron-job.org to call `/api/push?key=<CRON_SECRET>` every minute
 
 ## 6. AI Usage
 
@@ -127,6 +132,7 @@ vercel dev
 | How it is used | Analyzes one user-captured photo with Vision (image understanding) to decide whether the person is drinking water/a beverage. Receives the result (true/false) and a short reason as JSON and decides whether to dismiss the alarm |
 | Why redundancy | When a popular model responds slowly, the service automatically switches to a lighter model in the same service to keep it stable |
 | Scope | **AI photo verification is the only verification method.** A button click or a QR scan alone never completes verification; the service does not work without AI. |
+| Supporting API | OGQ Market API — awards an OGQ Market sticker as a reward after successful verification (`api/sticker.js`). It is a bonus feature separate from the AI judgment; if the call fails, verification, alarms and every other core feature keep working |
 
 **Development assistance tools (used in planning and building)**
 
@@ -141,7 +147,7 @@ vercel dev
 
 | Check item | Response |
 |---|---|
-| **Privacy** | Captured images are sent once for AI verification and discarded immediately; they are not stored on any server or database. There is no face recognition or identity detection — only "was the person drinking?" is judged. What is stored on login is only hydration records and settings; measurement events use a random anonymous ID and contain no name, photo or location. Firestore security rules restrict access so that users can only reach their own data. |
+| **Privacy** | Captured images are sent once for AI verification and discarded immediately; they are not stored on any server or database. There is no face recognition or identity detection — only "was the person drinking?" is judged. What is stored on login is only hydration records and settings; measurement events use a random anonymous ID and contain no name, photo or location. Firestore security rules restrict access so that users can only reach their own data. Push alerts run only if the user turns them on; then only the device notification address, the next alarm time and language are stored briefly on the server, and are deleted when the alarm ends or the feature is turned off. |
 | **Copyright** | Only self-made or open-source / free-license code, icons and fonts are used. |
 | **AI-generated content disclosure** | The AI models used and their scope are disclosed in "6. AI Usage". |
 | **Minor safety** | The service is designed for adult industrial workers and does not assume use by minors. |
@@ -160,10 +166,13 @@ vercel dev
 - **Settings**: vibration, 3 alarm sounds, day-start time (for shift work), pre-capture screen flash, privacy consent notice
 - **Anonymous measurement**: visit / start / complete / return / error events recorded under an anonymous ID (viewable on the owner dashboard)
 - **Bug & suggestion reports**: in-app 💬 Report button → delivered to the inbox and by e-mail simultaneously
+- **Alerts that work with the screen off (push)**: when turned on in settings, the server sends a push at alarm time and repeats every minute, up to 5 times, until verification (stops when the user returns to the app). Alerts can be up to 1 minute late, and iPhone receives them only in an app added to the Home Screen.
+- **Alert guide window**: explains the setup steps for iPhone and Android inside the app, and warns users of in-app browsers (Naver, KakaoTalk) to reopen in Safari or Chrome. It opens once automatically the first time the timer starts.
+- **Timer correction**: remaining time is computed from the end time, so it stays accurate when the screen turns off and on, and the alarm rings as soon as the user returns. A screen wake lock is also requested while the timer runs.
 
 ## 9. Future Ideas
 
-The following are not yet implemented and are plans we want to develop during the 8-week coaching period.
+The following are not yet implemented; we plan to keep developing them after the 8-week coaching period.
 
 - **Dual alarm structure**: a second alarm matched to the time workers leave their work area
 - **Automatic shift-pattern adjustment**: change the alarm interval automatically with shift changes
@@ -197,7 +206,7 @@ Beyond simply translating UI text into eight languages, we considered the user e
 - **Tone localization**: Japanese uses polite (丁寧語) wording suited to industrial tools; English uses concise instructions as in international workplaces. We did not paste machine translation; we composed natural sentences per language.
 - **Language-linked AI results**: the "reason" returned after photo judgment is generated directly in the user's selected language, because the language is sent to the server together with the photo. This avoids a half-multilingual design where only the UI is translated and the AI answers only in Korean.
 - **Customer support in eight languages**: the in-app FAQ is provided identically in eight languages so users can solve problems on their own without a language barrier.
-- **Multilingual documentation**: the app UI, FAQ and the AI reasoning are all offered in eight languages so users who don't know Korean can use it without extra help. This README is also provided in Korean, English, Japanese and Chinese.
+- **Multilingual documentation**: this README is provided in four languages (Korean, English, Japanese, Chinese) so overseas reviewers and adopting companies can check the structure and setup right away.
 
 ## 12. Maintenance & Technical Support
 
@@ -216,8 +225,14 @@ Assuming deployment to real industrial sites as a B2B solution, we have designed
 
 ### Support channels (planned)
 - **Tier 1 self-service**: the in-app multilingual FAQ covers frequent issues (silent alarm, camera errors, etc.)
-- **Tier 2 contact**: GitHub Issues planned as the official inquiry / bug report channel
+- **Tier 2 contact**: the in-app 💬 report button is already in operation for bugs and suggestions; GitHub Issues will be added as an official bug-report channel
 - **Response goal**: first response within 24 hours for service-outage-level errors (currently a team-project target; to be formalized as an SLA when commercialized)
+
+### Operations Plan After Week 8
+- **Error handling**: Errors and suggestions sent through the in-app 💬 report button reach the inbox and email immediately, and we fix them as soon as we confirm them. We also check the AI error log (type, status code, duration) on the live dashboard regularly, and analyze and fix any error that appears.
+- **Running cost**: We currently run within free-tier limits, so there is no fixed monthly cost (hosting: Vercel; database, login and push notifications: Firebase; alert scheduler: cron-job.org). Costs arise only if usage grows past the AI verification (Gemini) quota, at which point we will consider a paid plan sized to usage. Photos are not stored on our server, so there is no storage cost either.
+- **Growing the user base**: We opened an Instagram account (@water_cycle.ai) and are preparing Reels to promote the product. We track whether new users come back on the dashboard and improve accordingly.
+- **App store release plan**: After stabilizing the web service, we plan to publish the app on the App Store (iOS) and Google Play (Android), to deliver alerts more reliably when the screen is off and make installation easier.
 
 ### Future plans
 - Introduce a `CHANGELOG.md` to track release history
@@ -248,14 +263,15 @@ Team members' and judges' visits (`?judge=1`) are flagged as `internal` and excl
 ### Measured results (owner dashboard)
 | Funnel step | Users |
 |---|---|
-| Visit | 12 |
-| Start | 7 |
-| Complete | 7 |
-| Return | 3 |
+| Visit | 33 |
+| Start | 15 |
+| Complete | 15 |
+| Return | 7 |
 
-- **North Star metric**: **7** external users who passed AI verification at least once in the last 7 days (W1 goal: 10 after 8 weeks)
-- Starters (7) and completers (7) are equal; the largest drop-off is **visit → start (12 → 7)**
-- These numbers are values at the time of capture and keep updating. (The final values are attached as a dashboard capture at submission.)
+- **North Star metric**: **13** external users who passed AI verification at least once in the last 7 days (W1 start 0 → goal 10; 130% of goal)
+- The largest drop-off is **visit → start (33 → 15, 54.5%)**; all 15 users who tried to take a photo passed verification.
+- Users who came back on another day: **7 / 33 (21.2%)**. Of 30 week-1 users, 4 (13.3%) came back in week 2 (10/12 only), which is provisional because week 2 is a single day.
+- Measurement period 2026-10-05 ~ 10-12 (8 days); 321 external events, with 57 team/judge events excluded. The sample is small, so the numbers show direction only. (Dashboard captures are attached to the W8 final KPI report.)
 
 ### Dashboard access
 `stats.html` (funnel · retention · daily · AI error log) and `inbox.html` (report inbox) show data **only after logging in with the owner's Google account**. Even though the page URLs are public, the data is blocked by Firestore security rules. For judging, dashboard captures are attached to the submission.
@@ -271,6 +287,9 @@ Team members' and judges' visits (`?judge=1`) are flagged as `internal` and excl
 | Intermittent timeout (504) errors | Automatically log type and duration to distinguish server time limits from AI-side rejections (503·429) |
 | Survey comment: "laggy while typing in settings" | Stop re-rendering the whole screen every second while the settings panel is open |
 | No channel for reporting errors | Added in-app report button + inbox + e-mail delivery |
+| Interval reset from 5 to 30 minutes after a drink | Do not save until the cloud load has finished |
+| Past records and intake overwritten with 0 when logged in | Replaced the structure where stale tabs/devices overwrote server records; now saves only when values actually change |
+| Timer stops when the phone screen turns off | End-time-based calculation + screen wake lock + server push notifications |
 
 ## 15. Development History (Issue Response Log)
 
@@ -286,6 +305,12 @@ Team members' and judges' visits (`?judge=1`) are flagged as `internal` and excl
 | Redefining the target | Six interviews at the semiconductor exhibition showed that fab cleanrooms ban cameras and gloves make touch hard, so AI photo verification is hard to apply there; yet general industrial workers without cleanroom suits have the same hydration problem | Widened the target from semiconductor-only to industrial sites without camera restrictions; camera-banned environments (e.g., fab cleanrooms) were split off as a separate future task |
 | No measurement | No way to know actual usage beyond surveys | In-app anonymous event measurement + owner-only dashboard (funnel · retention · North Star) |
 | Unknown cause of timeouts | A 504 could be a server problem or an AI rejection, with no way to tell | Record type / status / duration in `error` events, plus user reports via inbox and e-mail |
+| Interval reset | On login, the previous state was saved before cloud values loaded, reverting 5 minutes to 30 | Stop saving while loading |
+| Past records overwritten with 0 | Other tabs/devices open on the same account overwrote the server with stale state every second | Save only when values actually change; verified with a two-tab reproduction test |
+| No alarm when the screen is off | The phone pauses the browser when the screen turns off, so the in-app timer cannot run | End-time-based timer + a server that sends a push at alarm time (FCM, 1-minute scheduler) |
+| In-app browser login blocked | Google sign-in is blocked by policy inside in-app browsers such as Naver and KakaoTalk (`disallowed_useragent`); Naver login is not a built-in Firebase provider | Detect in-app browsers and show guidance to open in Chrome/Safari; keep Google as the single sign-in method and keep no-login use fully available |
+| Skewed dashboard numbers | Visitor/retention metrics mixed in developer and test-device events, and return rate was inaccurate when the current week had only one day of data | Excluded internal events, de-duplicated by anonymous user ID, and stated the limits of short-window metrics in the report |
+| Background push (the longest task) | Push is not just app code: VAPID key, service account, server env vars, an external scheduler (Vercel's free plan has no per-minute cron) and iOS home-screen installation must all line up; several setup errors occurred | Settled on a server function (`api/push.js`) plus a 1-minute external scheduler, kept secrets in env vars only (an exposed key was revoked and reissued immediately), and added an in-app setup guide per environment |
 
 ## Closing
 
