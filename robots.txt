@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /stats.html
+Disallow: /inbox.html
+Disallow: /api/
+
+Sitemap: https://drink-water-five-drab.vercel.app/sitemap.xml
