@@ -455,7 +455,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       historyEmpty: '아직 저장된 기록이 없습니다.',
       historyClose: '닫기',
       consentTitle: '시작하기 전에 확인해주세요',
-      consentBody: '이 서비스는 물 마시는 모습을 카메라로 촬영해 AI가 판별합니다.<br><br>· 촬영된 사진은 <b>판별 목적으로 1회만 사용</b>되며,<br>&nbsp;&nbsp;판별 즉시 <b>서버에 저장되지 않고 폐기</b>됩니다.<br>· 얼굴 인식이나 신원 식별에는 사용되지 않습니다.<br>· 이 서비스는 <b>선택 사항</b>이며, 언제든 사용을 중단할 수 있습니다.',
+      consentBody: '이 서비스는 물 마시는 모습을 카메라로 촬영해 AI가 판별합니다.<br><br>· 촬영된 사진은 판별을 위해 <b>Google Gemini API(외부 AI)로 1회 전송</b>됩니다.<br>· 저희 서버에는 <b>저장하지 않고</b> 판별 후 바로 폐기합니다.<br>· 단, Gemini 무료 등급 약관에 따라 <b>Google이 전송된 사진을 서비스 개선에 활용하거나 검토자가 볼 수 있습니다.</b><br>· <b>얼굴은 나오지 않게, 손과 컵이 보이도록</b> 촬영해 주세요.<br>· 저희는 얼굴 인식이나 신원 식별을 하지 않습니다.<br>· 이 서비스는 <b>선택 사항</b>이며, 언제든 사용을 중단할 수 있습니다.',
       consentCheckbox: '위 내용을 확인했으며 동의합니다',
       consentBtn: '확인했습니다, 시작하기',
       dontShowAgain: '다시 표시하지 않기',
@@ -590,7 +590,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       historyEmpty: 'No saved records yet.',
       historyClose: 'Close',
       consentTitle: 'Before you start',
-      consentBody: 'This service uses your camera to verify that you\'re drinking water.<br><br>· Photos are used <b>only once, for verification</b>,<br>&nbsp;&nbsp;then <b>deleted immediately</b> — never stored on any server.<br>· No facial recognition or identity check is performed.<br>· Using this service is <b>optional</b>, and you may stop anytime.',
+      consentBody: 'This service uses your camera to check that you\'re drinking water, and AI makes the judgment.<br><br>· Each photo is <b>sent once to the Google Gemini API (an external AI)</b> for the check.<br>· We <b>do not store</b> photos on our servers; they are discarded right after the check.<br>· However, under the Gemini free-tier terms, <b>Google may use submitted photos to improve its services, and human reviewers may see them.</b><br>· Please <b>keep your face out of the shot and show your hand and cup</b>.<br>· We do not perform facial recognition or identity checks.<br>· Using this service is <b>optional</b>, and you may stop anytime.',
       consentCheckbox: 'I have read and agree to the above',
       consentBtn: 'Got it, let\'s start',
       dontShowAgain: 'Don\'t show this again',
@@ -725,7 +725,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       historyEmpty: 'まだ保存された記録がありません。',
       historyClose: '閉じる',
       consentTitle: '始める前にご確認ください',
-      consentBody: '本サービスはカメラで飲水の様子を撮影し、AIが判定します。<br><br>・撮影された写真は<b>判定のためだけに1回使用</b>され、<br>&nbsp;&nbsp;判定後は<b>サーバーに保存されず即座に削除</b>されます。<br>・顔認識や本人確認には使用されません。<br>・本サービスは<b>任意</b>であり、いつでも利用を中止できます。',
+      consentBody: '本サービスはカメラで飲水の様子を撮影し、AIが判定します。<br><br>・撮影した写真は判定のため<b>Google Gemini API（外部AI）に1回送信</b>されます。<br>・当サービスのサーバーには<b>保存せず</b>、判定後すぐに破棄します。<br>・ただし、Gemini無料枠の規約により、<b>Googleが送信された写真をサービス改善に利用したり、担当者が閲覧したりする場合があります。</b><br>・<b>顔は写さず、手とコップが写るように</b>撮影してください。<br>・当サービスは顔認識や本人確認を行いません。<br>・本サービスは<b>任意</b>であり、いつでも利用を中止できます。',
       consentCheckbox: '上記内容を確認し、同意します',
       consentBtn: '確認しました、始める',
       dontShowAgain: '今後表示しない',
@@ -840,7 +840,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       historyEmpty: '暂无保存的记录。',
       historyClose: '关闭',
       consentTitle: '开始前请确认',
-      consentBody: '本服务将通过摄像头拍摄您的饮水画面并由AI进行判断。<br><br>· 拍摄的照片仅<b>用于判断目的使用一次</b>，<br>&nbsp;&nbsp;判断完成后将<b>立即销毁，不会保存在服务器</b>。<br>· 不用于人脸识别或身份验证。<br>· 本服务为<b>可选项目</b>，您可以随时停止使用。',
+      consentBody: '本服务通过摄像头拍摄您的饮水画面，并由AI进行判断。<br><br>· 拍摄的照片会为判断而<b>发送一次至Google Gemini API（外部AI）</b>。<br>· 我们的服务器<b>不保存</b>照片，判断后立即销毁。<br>· 但根据Gemini免费版条款，<b>Google可能将收到的照片用于改进服务，审核人员也可能查看。</b><br>· 请<b>不要拍到脸，拍到手和杯子即可</b>。<br>· 我们不进行人脸识别或身份验证。<br>· 本服务为<b>可选项目</b>，您可以随时停止使用。',
       consentCheckbox: '我已阅读并同意以上内容',
       consentBtn: '我已了解，开始使用',
       dontShowAgain: '不再显示',
@@ -955,7 +955,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       historyEmpty: 'Chưa có dữ liệu được lưu.',
       historyClose: 'Đóng',
       consentTitle: 'Vui lòng xác nhận trước khi bắt đầu',
-      consentBody: 'Dịch vụ này sử dụng camera để quay cảnh bạn uống nước và AI sẽ phân tích.<br><br>· Ảnh chụp <b>chỉ được sử dụng một lần cho mục đích xác minh</b>,<br>&nbsp;&nbsp;và sẽ <b>bị xóa ngay sau khi phân tích, không lưu trên máy chủ</b>.<br>· Không sử dụng để nhận diện khuôn mặt hay xác minh danh tính.<br>· Dịch vụ này là <b>tùy chọn</b>, bạn có thể ngừng sử dụng bất cứ lúc nào.',
+      consentBody: 'Dịch vụ này dùng camera chụp cảnh bạn uống nước và AI sẽ đánh giá.<br><br>· Ảnh chụp được <b>gửi một lần đến Google Gemini API (AI bên ngoài)</b> để xác minh.<br>· Chúng tôi <b>không lưu</b> ảnh trên máy chủ của mình; ảnh bị xóa ngay sau khi xác minh.<br>· Tuy nhiên, theo điều khoản gói miễn phí của Gemini, <b>Google có thể dùng ảnh đã gửi để cải thiện dịch vụ và người kiểm duyệt có thể xem.</b><br>· Vui lòng <b>không để lộ mặt, chỉ chụp tay và cốc</b>.<br>· Chúng tôi không nhận diện khuôn mặt hay xác minh danh tính.<br>· Dịch vụ này là <b>tùy chọn</b>, bạn có thể ngừng sử dụng bất cứ lúc nào.',
       consentCheckbox: 'Tôi đã đọc và đồng ý với nội dung trên',
       consentBtn: 'Đã hiểu, bắt đầu',
       dontShowAgain: 'Không hiển thị lại',
@@ -1070,7 +1070,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       historyEmpty: 'ยังไม่มีข้อมูลที่บันทึกไว้',
       historyClose: 'ปิด',
       consentTitle: 'กรุณายืนยันก่อนเริ่มใช้งาน',
-      consentBody: 'บริการนี้ใช้กล้องถ่ายภาพขณะดื่มน้ำและวิเคราะห์ด้วย AI<br><br>· ภาพที่ถ่าย <b>ใช้เพียงครั้งเดียวเพื่อการวิเคราะห์</b> เท่านั้น<br>&nbsp;&nbsp;และจะ<b>ถูกลบทันทีหลังวิเคราะห์ ไม่มีการบันทึกไว้บนเซิร์ฟเวอร์</b><br>· ไม่ใช้เพื่อการจดจำใบหน้าหรือยืนยันตัวตน<br>· บริการนี้เป็น<b>ทางเลือก</b> คุณสามารถหยุดใช้งานได้ทุกเมื่อ',
+      consentBody: 'บริการนี้ใช้กล้องถ่ายภาพขณะคุณดื่มน้ำ แล้วให้ AI ตรวจสอบ<br><br>· ภาพที่ถ่ายจะถูก<b>ส่งไปยัง Google Gemini API (AI ภายนอก) หนึ่งครั้ง</b>เพื่อตรวจสอบ<br>· เรา<b>ไม่เก็บ</b>ภาพไว้บนเซิร์ฟเวอร์ของเรา และลบทิ้งทันทีหลังตรวจสอบ<br>· อย่างไรก็ตาม ตามข้อกำหนดของ Gemini แบบฟรี <b>Google อาจนำภาพที่ส่งไปใช้ปรับปรุงบริการ และผู้ตรวจสอบอาจเห็นภาพได้</b><br>· กรุณา<b>ถ่ายให้เห็นมือและแก้ว โดยไม่ให้เห็นใบหน้า</b><br>· เราไม่ใช้การจดจำใบหน้าหรือยืนยันตัวตน<br>· บริการนี้เป็น<b>ทางเลือก</b> คุณหยุดใช้งานได้ทุกเมื่อ',
       consentCheckbox: 'ฉันได้อ่านและยอมรับเงื่อนไขข้างต้นแล้ว',
       consentBtn: 'เข้าใจแล้ว เริ่มใช้งาน',
       dontShowAgain: 'ไม่ต้องแสดงอีก',
@@ -1185,7 +1185,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       historyEmpty: 'Belum ada data tersimpan.',
       historyClose: 'Tutup',
       consentTitle: 'Mohon konfirmasi sebelum memulai',
-      consentBody: 'Layanan ini menggunakan kamera untuk memotret Anda saat minum air dan dianalisis oleh AI.<br><br>· Foto yang diambil <b>hanya digunakan sekali untuk tujuan verifikasi</b>,<br>&nbsp;&nbsp;dan akan <b>langsung dihapus setelah verifikasi, tidak disimpan di server</b>.<br>· Tidak digunakan untuk pengenalan wajah atau verifikasi identitas.<br>· Layanan ini bersifat <b>opsional</b>, Anda dapat berhenti menggunakan kapan saja.',
+      consentBody: 'Layanan ini memakai kamera untuk memotret Anda saat minum air, lalu AI menilainya.<br><br>· Foto <b>dikirim satu kali ke Google Gemini API (AI eksternal)</b> untuk verifikasi.<br>· Kami <b>tidak menyimpan</b> foto di server kami; foto langsung dihapus setelah verifikasi.<br>· Namun, sesuai ketentuan Gemini versi gratis, <b>Google dapat memakai foto yang dikirim untuk meningkatkan layanannya, dan peninjau manusia dapat melihatnya.</b><br>· Mohon <b>jangan perlihatkan wajah; cukup tangan dan gelas</b>.<br>· Kami tidak melakukan pengenalan wajah atau verifikasi identitas.<br>· Layanan ini bersifat <b>opsional</b> dan dapat dihentikan kapan saja.',
       consentCheckbox: 'Saya telah membaca dan menyetujui hal di atas',
       consentBtn: 'Mengerti, mulai',
       dontShowAgain: 'Jangan tampilkan lagi',
@@ -1300,7 +1300,7 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       historyEmpty: 'Wala pang naka-save na record.',
       historyClose: 'Isara',
       consentTitle: 'Paki-kumpirma bago magsimula',
-      consentBody: 'Gumagamit ang serbisyong ito ng camera para kunan ka ng litrato habang umiinom ng tubig at ini-analyze ng AI.<br><br>· Ang mga litratong kinuha ay <b>ginagamit lamang minsan para sa layuning pagpapatunay</b>,<br>&nbsp;&nbsp;at <b>agad na binubura pagkatapos i-verify, hindi nase-save sa server</b>.<br>· Hindi ginagamit para sa facial recognition o pagpapatunay ng identidad.<br>· Ang serbisyong ito ay <b>opsyonal</b>, puwede mong itigil ang paggamit anumang oras.',
+      consentBody: 'Gumagamit ang serbisyong ito ng camera para kunan ka ng litrato habang umiinom ng tubig, at AI ang magsusuri.<br><br>· Ang litrato ay <b>ipinapadala nang isang beses sa Google Gemini API (panlabas na AI)</b> para sa pagsusuri.<br>· <b>Hindi namin sine-save</b> ang litrato sa aming server; binubura ito agad pagkatapos ng pagsusuri.<br>· Gayunman, ayon sa mga tuntunin ng libreng Gemini, <b>maaaring gamitin ng Google ang ipinadalang litrato para pagbutihin ang serbisyo nito, at maaari itong makita ng mga tagasuri.</b><br>· Pakiusap, <b>huwag isama ang mukha; kamay at baso lang ang ipakita</b>.<br>· Hindi kami gumagawa ng facial recognition o pagpapatunay ng identidad.<br>· <b>Opsyonal</b> ang serbisyong ito at maaari mo itong ihinto anumang oras.',
       consentCheckbox: 'Nabasa ko at sumasang-ayon ako sa nasa itaas',
       consentBtn: 'Nauunawaan ko, magsimula',
       dontShowAgain: 'Huwag nang ipakita ulit',
@@ -1527,10 +1527,10 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       try{
         if(state.dontShowAgainChecked){
           // "다시 표시하지 않기"를 체크한 경우: 영구 동의로 저장 (24시간 제한 없음)
-          localStorage.setItem('hydrocheck_privacy_consent_permanent', 'true');
+          localStorage.setItem('hydrocheck_privacy_consent_v2_permanent', 'true');
         } else {
           // 체크 안 한 경우: 기존처럼 24시간 동안만 유효
-          localStorage.setItem('hydrocheck_privacy_consent_at', Date.now().toString());
+          localStorage.setItem('hydrocheck_privacy_consent_v2_at', Date.now().toString());
         }
       }catch(e){}
       render();
@@ -2502,10 +2502,10 @@ const { useState, useEffect, useRef, useCallback } = (() => {
       // 날짜가 다르면 설정값만 유지하고 오늘 기록은 새로 시작
     }catch(e){ /* 저장소 사용 불가 환경 - 조용히 무시 */ }
     try{
-      if(localStorage.getItem('hydrocheck_privacy_consent_permanent') === 'true'){
+      if(localStorage.getItem('hydrocheck_privacy_consent_v2_permanent') === 'true'){
         state.privacyConsented = true; // "다시 표시하지 않기"를 선택했던 경우 - 영구적으로 안 물어봄
       } else {
-        const consentedAt = parseInt(localStorage.getItem('hydrocheck_privacy_consent_at'), 10);
+        const consentedAt = parseInt(localStorage.getItem('hydrocheck_privacy_consent_v2_at'), 10);
         const ONE_DAY_MS = 24 * 60 * 60 * 1000;
         if(!isNaN(consentedAt) && (Date.now() - consentedAt) < ONE_DAY_MS){
           state.privacyConsented = true; // 동의 후 24시간 이내면 다시 안 물어봄
