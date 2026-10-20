@@ -74,7 +74,7 @@ graph TD
     A -.->|"Opted-in device: schedule alarm time"| E
 ```
 
-- Captured images are discarded right after verification and are not stored on any server or database.
+- Captured images are sent once to the Google Gemini API for verification; we do not store them on our servers or database and discard them right after the check. Under the Gemini free-tier terms we currently use, Google may use submitted content to improve its services and human reviewers may see it, so the in-app consent screen discloses this and asks users to show their hand and cup instead of their face. We plan to move to the paid tier, which does not use inputs for training, as usage grows.
 - **Every feature works without logging in.** Today's records, statistics and settings are kept in browser storage and survive reloads.
 - **When logged in with a Google account**, the same records are stored in Firestore (cloud), persist across devices and browser resets, and the last 14 days can be viewed separately.
 - **Alerts when the screen is off (optional)**: Phones pause web pages when the screen turns off, so when a user turns alerts on, the alarm time is scheduled on the server (`api/push.js`) at timer start, and a 1-minute scheduler (cron-job.org) triggers a Firebase Cloud Messaging push for due alarms. It repeats every minute, up to 5 times, until verification.
@@ -147,7 +147,7 @@ vercel dev
 
 | Check item | Response |
 |---|---|
-| **Privacy** | Captured images are sent once for AI verification and discarded immediately; they are not stored on any server or database. There is no face recognition or identity detection — only "was the person drinking?" is judged. What is stored on login is only hydration records and settings; measurement events use a random anonymous ID and contain no name, photo or location. Firestore security rules restrict access so that users can only reach their own data. Push alerts run only if the user turns them on; then only the device notification address, the next alarm time and language are stored briefly on the server, and are deleted when the alarm ends or the feature is turned off. |
+| **Privacy** | Captured images are sent once to the Google Gemini API for verification and are not stored on our servers or database. Because the Gemini free-tier terms allow Google to use submitted content to improve its services and let human reviewers see it, the consent screen discloses this and asks users to keep their face out of the shot (moving to the paid tier as usage grows). There is no face recognition or identity detection — only "was the person drinking?" is judged. What is stored on login is only hydration records and settings; measurement events use a random anonymous ID and contain no name, photo or location. Firestore security rules restrict access so that users can only reach their own data. Push alerts run only if the user turns them on; then only the device notification address, the next alarm time and language are stored briefly on the server, and are deleted when the alarm ends or the feature is turned off. |
 | **Copyright** | Only self-made or open-source / free-license code, icons and fonts are used. |
 | **AI-generated content disclosure** | The AI models used and their scope are disclosed in "6. AI Usage". |
 | **Minor safety** | The service is designed for adult industrial workers and does not assume use by minors. |
